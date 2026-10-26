@@ -1,0 +1,1528 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>[hidden]{display:none!important}body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+<title>Paliwo na Trasę</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Kalkulator planu żywienia i nawodnienia na wyjazd rowerowy: żele, napoje, elektrolity rozpisane na czas i kilometry.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: narzędzie dwukolumnowe — po lewej formularz w zwijanych sekcjach, po prawej żywy plan; na telefonie jedna kolumna. */
+:root{
+  --bg:#EDF0F3; --panel:#FFFFFF; --sunk:#F5F7F9; --ink:#132033; --muted:#5B6779; --line:#D6DCE4;
+  --accent:#1D5BC9; --accent-ink:#FFFFFF; --accent-soft:#E2EAF9;
+  --carb:#C98300; --water:#0F8BAA; --salt:#7349C9; --food:#3A8A3D; --caf:#8A5A2B;
+  --ok:#2C7A4F; --warn:#B9520C; --crit:#B4232A; --ok-soft:#E3F2EA; --warn-soft:#FBEBDD; --crit-soft:#F9E1E2;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0D131B; --panel:#141C27; --sunk:#101720; --ink:#E4EAF2; --muted:#93A0B2; --line:#253142;
+  --accent:#6E9CFF; --accent-ink:#0B1220; --accent-soft:#1A2740;
+  --carb:#F0B23A; --water:#3DBEDB; --salt:#A98BFF; --food:#6CC271; --caf:#CF9862;
+  --ok:#5ACF92; --warn:#F7964A; --crit:#F7767B; --ok-soft:#14291F; --warn-soft:#2E1E12; --crit-soft:#331619;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D131B; --panel:#141C27; --sunk:#101720; --ink:#E4EAF2; --muted:#93A0B2; --line:#253142;
+  --accent:#6E9CFF; --accent-ink:#0B1220; --accent-soft:#1A2740;
+  --carb:#F0B23A; --water:#3DBEDB; --salt:#A98BFF; --food:#6CC271; --caf:#CF9862;
+  --ok:#5ACF92; --warn:#F7964A; --crit:#F7767B; --ok-soft:#14291F; --warn-soft:#2E1E12; --crit-soft:#331619;
+  color-scheme:dark}
+:root,:root[data-theme="light"]{color-scheme:light;--cs:light}
+:root[data-theme="dark"]{color-scheme:dark;--cs:dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cs:dark}}
+/* kontrolki przeglądarki (strzałki, pola wyboru, paski) biorą motyw wprost od strony, nie od otoczenia */
+input,select,textarea,button,.plist,.tablewrap,.sticker,.stprev{color-scheme:var(--cs)}
+.stprev,.sticker,.tablewrap{scrollbar-color:var(--line) var(--sunk);scrollbar-width:thin}
+.stprev::-webkit-scrollbar,.sticker::-webkit-scrollbar,.tablewrap::-webkit-scrollbar{width:10px;height:10px}
+.stprev::-webkit-scrollbar-track,.sticker::-webkit-scrollbar-track,.tablewrap::-webkit-scrollbar-track{background:var(--sunk)}
+.stprev::-webkit-scrollbar-thumb,.sticker::-webkit-scrollbar-thumb,.tablewrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;border:2px solid var(--sunk)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1360px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:.01em}
+.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+.top{padding-block:22px 18px}
+.top .wrap{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.brand h1{font-size:clamp(34px,5vw,52px);line-height:.9;text-transform:uppercase;font-weight:700}
+.brand h1 span{color:var(--accent)}
+.brand p{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.topside{display:flex;flex-direction:column;align-items:flex-end;gap:14px;margin-left:auto}
+.theme{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:5px 12px 5px 6px;cursor:pointer;font-weight:600;font-size:13px}
+.theme:hover{border-color:var(--accent)}
+.theme .knob{width:34px;height:20px;border-radius:99px;background:var(--sunk);border:1px solid var(--line);position:relative;flex:none}
+.theme .knob::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--accent);transition:transform .2s}
+.theme[aria-checked="true"] .knob::after{transform:translateX(14px)}
+@media (max-width:600px){.topside{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px))}.topside .legend{display:none}.top{position:relative}.brand{padding-right:110px}}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+
+/* layout */
+.layout{display:grid;grid-template-columns:minmax(330px,410px) minmax(0,1fr);gap:20px;align-items:start;padding-block:0 40px}
+@media (max-width:960px){.layout{grid-template-columns:minmax(0,1fr)}}
+aside{display:flex;flex-direction:column;gap:10px;min-width:0}
+#out{display:flex;flex-direction:column;gap:16px;min-width:0}
+
+/* form */
+details.box{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+details.box>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:baseline;gap:10px;user-select:none}
+details.box>summary::-webkit-details-marker{display:none}
+details.box>summary h2{font-size:20px;text-transform:uppercase;font-weight:700}
+details.box>summary .hint{color:var(--muted);font-size:13px;margin-left:auto;text-align:right}
+details.box>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-left:6px;flex:none;align-self:center}
+details.box[open]>summary::after{transform:rotate(-135deg)}
+details.box>summary .hint+*{margin-left:0}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;padding:0 14px 14px}
+.fields .full{grid-column:1/-1}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f>span{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.f input[type=number],.f input[type=text],.f input[type=time],.f select{width:100%;background:var(--sunk);border:1px solid var(--line);border-radius:7px;padding:8px 9px;min-width:0}
+.f input:focus,.f select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.f small{color:var(--muted);font-size:12px}
+.unit{position:relative}
+.unit input{padding-right:46px!important}
+.unit b{position:absolute;right:9px;top:50%;transform:translateY(-50%);font-weight:500;font-size:12px;color:var(--muted);pointer-events:none;font-family:var(--f-mono)}
+.seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:3px;gap:3px}
+.seg label{flex:1;text-align:center;padding:6px 6px;line-height:1.2;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;font-weight:500;font-size:14px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--accent);color:var(--accent-ink)}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.rangeval{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.rangeval strong{font-family:var(--f-mono);font-size:15px}
+.zone{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.wxget{display:grid;grid-template-columns:minmax(0,1fr) 96px auto;gap:8px 10px;align-items:end;background:var(--sunk);border:1px solid var(--line);border-radius:9px;padding:10px}
+.wxget .f input,.wxget .f select{background:var(--panel)}
+.wxget small{grid-column:1/-1;color:var(--muted);font-size:12px}
+.wxget small.err{color:var(--crit)}
+@media (max-width:420px){.wxget{grid-template-columns:1fr 1fr}.wxget .btn{grid-column:1/-1}}
+.drop{grid-column:1/-1;border:1.5px dashed var(--line);border-radius:9px;padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer;background:var(--sunk)}
+.drop:hover,.drop.over{border-color:var(--accent)}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.drop .ico{width:36px;height:36px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
+.drop div{min-width:0}
+.drop strong{display:block}
+.drop small{color:var(--muted);overflow-wrap:anywhere}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:14px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{color:var(--accent-ink);filter:brightness(1.08)}
+.btn.sm{padding:4px 9px;font-size:13px}
+.diy{grid-column:1/-1;background:var(--sunk);border:1px solid var(--line);border-radius:9px;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.diy .out{grid-column:1/-1;font-size:13px;color:var(--muted)}
+.diy .f input{background:var(--panel)}
+
+/* product picker */
+.force{display:flex;align-items:flex-start;gap:10px;margin:0 14px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--sunk);cursor:pointer}
+.force input{position:absolute;opacity:0;width:1px;height:1px}
+.force .sw{width:34px;height:20px;border-radius:99px;background:var(--line);position:relative;flex:none;margin-top:1px;transition:background .2s}
+.force .sw::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--panel);transition:transform .2s}
+.force input:checked+.sw{background:var(--food)}
+.force input:checked+.sw::after{transform:translateX(14px)}
+.force input:focus-visible+.sw{outline:2px solid var(--accent);outline-offset:2px}
+.force strong{display:block;font-weight:600}
+.force small{display:block;color:var(--muted);font-size:12.5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px}
+.chip{border:1px solid var(--line);background:var(--sunk);padding:4px 10px;border-radius:99px;font-size:13px;cursor:pointer;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.plist{max-height:430px;overflow:auto;border-top:1px solid var(--line);scrollbar-color:var(--line) var(--sunk);scrollbar-width:thin}
+.plist::-webkit-scrollbar{width:10px}
+.plist::-webkit-scrollbar-track{background:var(--sunk)}
+.plist::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;border:2px solid var(--sunk)}
+.prow{display:grid;grid-template-columns:auto minmax(0,1fr) 64px;gap:4px 10px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line)}
+.prow:last-child{border-bottom:0}
+.prow input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+.prow .nm{font-weight:500;line-height:1.25}
+.prow .meta{font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.prow input.q{width:64px;background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:5px 6px;text-align:center}
+.prow.off .nm,.prow.off .meta{opacity:.55}
+.prow .del{border:0;background:none;color:var(--crit);cursor:pointer;font-size:12px;padding:0;margin-left:6px}
+.tag{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:4px;margin-right:6px;vertical-align:1px;font-family:var(--f-body)}
+.t-gel{background:color-mix(in srgb,var(--carb) 18%,transparent);color:var(--carb)}
+.t-chew{background:color-mix(in srgb,var(--carb) 12%,transparent);color:var(--carb)}
+.t-bar,.t-food{background:color-mix(in srgb,var(--food) 16%,transparent);color:var(--food)}
+.t-elec{background:color-mix(in srgb,var(--salt) 16%,transparent);color:var(--salt)}
+.t-mix{background:color-mix(in srgb,var(--carb) 16%,transparent);color:var(--carb)}
+.sip{font-weight:600}
+.sip.m{color:var(--carb)}
+.sip.w{color:var(--water)}
+.pack li.packnote{padding-top:4px;font-size:12.5px}
+.t-drink{background:color-mix(in srgb,var(--water) 16%,transparent);color:var(--water)}
+.t-caf{background:color-mix(in srgb,var(--caf) 18%,transparent);color:var(--caf)}
+.addp{padding:12px 14px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.addp .f.w2{grid-column:span 2}
+.addp .f.w4{grid-column:1/-1}
+.note{font-size:12px;color:var(--muted);padding:8px 14px 12px;margin:0}
+
+/* output */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;min-width:0}
+.card h2{font-size:22px;text-transform:uppercase;font-weight:700}
+.card .sub{color:var(--muted);font-size:13px;margin:2px 0 0}
+.cardhead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.stat{background:var(--panel);padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .k{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
+.stat .k i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.stat .v{font-family:var(--f-display);font-size:30px;font-weight:700;line-height:1.05}
+.stat .v small{font-family:var(--f-body);font-size:14px;font-weight:500;color:var(--muted);margin-left:3px}
+.stat .d{font-size:12.5px;color:var(--muted);font-family:var(--f-mono)}
+.alerts{display:flex;flex-direction:column;gap:6px}
+.alert{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border-radius:8px;font-size:14px;border:1px solid transparent}
+.alert b.pill{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:99px;flex:none;margin-top:2px}
+.alert.crit{background:var(--crit-soft);border-color:color-mix(in srgb,var(--crit) 30%,transparent)}
+.alert.crit b.pill{background:var(--crit);color:var(--panel)}
+.alert.warn{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+.alert.warn b.pill{background:var(--warn);color:var(--panel)}
+.alert.ok{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+.alert.ok b.pill{background:var(--ok);color:var(--panel)}
+.charts{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+@media (max-width:1180px){.charts{grid-template-columns:minmax(0,1fr)}}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{font-family:var(--f-mono);font-size:11px;fill:var(--muted)}
+.chartbox{position:relative}
+.townpick{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-weight:600}
+.townpick select{background:var(--sunk);border:1px solid var(--line);border-radius:7px;padding:5px 8px;font-weight:500;color:var(--ink);color-scheme:var(--cs)}
+.chartbox svg{touch-action:pan-y;cursor:crosshair}
+.tip{position:absolute;z-index:5;pointer-events:none;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(10,20,40,.18);padding:8px 10px;font-size:12.5px;line-height:1.4;display:flex;flex-direction:column;gap:2px;max-width:260px}
+.tip b{font-family:var(--f-mono);font-weight:500;font-size:12px}
+.tip .tt-k{font-weight:600;display:flex;align-items:center;gap:6px}
+.tip .tt-k::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c)}
+.chartkey{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted);margin-top:6px}
+.chartkey i.dot{width:9px;height:9px;border-radius:50%;background:var(--c);vertical-align:0}
+.chartkey i.dot.ring{background:transparent;box-shadow:inset 0 0 0 2.5px var(--c)}
+.chartkey i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:3px}
+
+.tablewrap{overflow-x:auto;margin:0 -18px;padding:0 18px}
+table.plan{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
+table.plan th{text-align:left;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1.5px solid var(--ink)}
+table.plan td{padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.plan td.num{white-space:nowrap}
+table.plan tr.ev-refill td{background:color-mix(in srgb,var(--water) 8%,transparent)}
+table.plan tr.ev-start td,table.plan tr.ev-end td{background:var(--sunk)}
+table.plan .items{display:flex;flex-direction:column;gap:3px}
+table.plan .it{display:flex;align-items:baseline;gap:4px;flex-wrap:wrap}
+table.plan .muted{color:var(--muted);font-size:13px}
+.bar{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden;min-width:60px;margin-top:5px}
+.bar>span{display:block;height:100%;background:var(--carb)}
+.grade{font-family:var(--f-mono);font-size:12px;padding:1px 6px;border-radius:4px;background:var(--sunk);white-space:nowrap}
+.grade.up{color:var(--crit)}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.pack{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.pack li{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line)}
+.pack li:last-child{border-bottom:0}
+.pack .cnt{font-family:var(--f-display);font-size:24px;font-weight:700;line-height:1;text-align:right}
+.pack .sm{font-size:12.5px;color:var(--muted);font-family:var(--f-mono);white-space:nowrap}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-family:var(--f-mono);text-align:right}
+.prose p{margin:0 0 8px;max-width:68ch}
+.prose ul{margin:0 0 8px;padding-left:18px}
+.prose li{margin-bottom:3px}
+
+/* stem sticker */
+.stbtns{display:flex;gap:6px;flex-wrap:wrap}
+.stprev{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;justify-content:center;max-height:520px;overflow:auto}
+.stprev img{width:100%;max-width:300px;height:auto;align-self:flex-start;box-shadow:0 2px 10px rgba(10,20,40,.15);border-radius:4px;background:#fff}
+.stxt{margin-top:10px}
+.stxt summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:6px}
+.sticker{background:var(--sunk);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-family:var(--f-mono);font-size:13px;line-height:1.55;white-space:pre-wrap;overflow-x:auto;max-height:340px}
+.foot{color:var(--muted);font-size:12.5px;max-width:90ch;padding-block:0 30px}
+.foot p{margin:0 0 6px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:99px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:560px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.fields{grid-template-columns:1fr 1fr}.addp{grid-template-columns:1fr 1fr}.addp .f.w2{grid-column:1/-1}.stat .v{font-size:26px}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Paliwo <span>na trasę</span></h1>
+      <p>Wpisz trasę, siebie, rower i pogodę. Kalkulator policzy wydatek energii, potrzebne węglowodany, płyny i sód, a potem rozpisze produkty, które masz, na godziny i kilometry.</p>
+    </div>
+    <div class="topside">
+    <button type="button" class="theme" id="themeBtn" role="switch" aria-checked="false" aria-label="Tryb ciemny"><span class="knob"></span><span id="themeLbl">Jasny</span></button>
+    <div class="legend" aria-hidden="true">
+      <span><i style="background:var(--carb)"></i>węglowodany</span>
+      <span><i style="background:var(--water)"></i>płyny</span>
+      <span><i style="background:var(--salt)"></i>sód</span>
+      <span><i style="background:var(--food)"></i>stałe jedzenie</span>
+    </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap layout">
+<aside id="form">
+
+  <details class="box" open>
+    <summary><h2>Trasa</h2><span class="hint" id="h-route"></span></summary>
+    <div class="fields">
+      <label class="drop" id="drop">
+        <input type="file" id="gpx" accept=".gpx,application/gpx+xml">
+        <span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 3-4 6 6"/><path d="M12 3v8M8.5 7.5L12 11l3.5-3.5"/></svg></span>
+        <div><strong id="gpxTitle">Wczytaj ślad GPX</strong><small id="gpxInfo">Dystans, przewyższenia, wysokość i kierunki odcinków policzą się same.</small></div>
+      </label>
+      <div class="full" id="gpxClearRow" hidden><button type="button" class="btn sm" id="gpxClear">Usuń ślad GPX i wpisz trasę ręcznie</button></div>
+      <label class="f"><span>Dystans</span><div class="unit"><input type="number" id="dist" min="1" max="2000" step="1" value="140"><b>km</b></div></label>
+      <label class="f"><span>Przewyższenia</span><div class="unit"><input type="number" id="gain" min="0" max="30000" step="10" value="1800"><b>m</b></div></label>
+      <label class="f" id="f-cg"><span>Śr. nachylenie podjazdów</span><div class="unit"><input type="number" id="climbGrade" min="1" max="15" step="0.5" value="5"><b>%</b></div></label>
+      <label class="f"><span>Wysokość n.p.m.</span><div class="unit"><input type="number" id="alt" min="0" max="5000" step="50" value="250"><b>m</b></div></label>
+      <label class="f full"><span>Nawierzchnia główna</span><select id="surf1"></select></label>
+      <label class="f"><span>Druga nawierzchnia</span><select id="surf2"></select></label>
+      <label class="f"><span>Udział drugiej</span><div class="unit"><input type="number" id="surf2Pct" min="0" max="100" step="5" value="0"><b>%</b></div></label>
+      <div class="full f"><small id="surfInfo"></small></div>
+      <label class="f"><span>Start o godzinie</span><input type="time" id="start" value="07:00"></label>
+      <label class="f"><span>Postoje łącznie</span><div class="unit"><input type="number" id="stops" min="0" max="1440" step="5" value="30"><b>min</b></div></label>
+    </div>
+  </details>
+
+  <details class="box" open>
+    <summary><h2>Zawodnik</h2><span class="hint" id="h-rider"></span></summary>
+    <div class="fields">
+      <label class="f"><span>Masa ciała</span><div class="unit"><input type="number" id="mass" min="30" max="200" step="0.5" value="75"><b>kg</b></div></label>
+      <label class="f"><span>FTP</span><div class="unit"><input type="number" id="ftp" min="60" max="500" step="5" value="250"><b>W</b></div></label>
+      <label class="f full"><span>Tolerancja węglowodanów (trening jelit)</span><select id="gut">
+        <option value="45">nietrenowany żołądek (do ~45 g/h)</option>
+        <option value="60">podstawowa (do 60 g/h)</option>
+        <option value="75">średnia (do 75 g/h)</option>
+        <option value="90" selected>dobra (do 90 g/h)</option>
+        <option value="105">bardzo dobra (do 105 g/h)</option>
+        <option value="120">wytrenowana (do 120 g/h)</option>
+      </select></label>
+      <label class="f full"><span>Zapas glikogenu na starcie</span><select id="gly">
+        <option value="4.5">niski (dzień po ciężkim treningu, mało węgli)</option>
+        <option value="6" selected>normalny (zwykła dieta)</option>
+        <option value="7.5">pełny (ładowanie węgli 1–2 dni)</option>
+      </select></label>
+      <label class="f full"><span>Kofeina na trasie</span><select id="caf">
+        <option value="0">bez kofeiny</option>
+        <option value="2">do 2 mg/kg</option>
+        <option value="3" selected>do 3 mg/kg</option>
+        <option value="4">do 4 mg/kg</option>
+      </select></label>
+    </div>
+  </details>
+
+  <details class="box">
+    <summary><h2>Rower i opony</h2><span class="hint" id="h-bike"></span></summary>
+    <div class="fields">
+      <label class="f"><span>Masa roweru</span><div class="unit"><input type="number" id="bike" min="5" max="40" step="0.1" value="8.5"><b>kg</b></div></label>
+      <label class="f"><span>Bagaż, bidony, ubrania</span><div class="unit"><input type="number" id="gear" min="0" max="60" step="0.5" value="3"><b>kg</b></div></label>
+      <label class="f full"><span>Pozycja i sylwetka (CdA)</span><select id="pos">
+        <option value="0.26">lemondka / pozycja czasowa (0,26 m²)</option>
+        <option value="0.30">szosa, dolny chwyt (0,30 m²)</option>
+        <option value="0.34" selected>szosa, klamkomanetki (0,34 m²)</option>
+        <option value="0.40">gravel, wyprostowany (0,40 m²)</option>
+        <option value="0.44">trekking / górny chwyt (0,44 m²)</option>
+        <option value="0.48">bikepacking z torbami (0,48 m²)</option>
+        <option value="0.50">MTB (0,50 m²)</option>
+      </select></label>
+      <label class="f full"><span>Jazda</span><select id="draft">
+        <option value="1" selected>solo</option>
+        <option value="0.85">we dwóch, na zmiany</option>
+        <option value="0.75">mała grupa</option>
+        <option value="0.65">duża grupa / peleton</option>
+      </select></label>
+      <label class="f full"><span>Opony</span><select id="tyre"></select></label>
+      <label class="f" id="f-crr"><span>Własne Crr</span><input type="number" id="crr" min="0.0015" max="0.03" step="0.0001" value="0.0040"></label>
+      <div class="full f"><small id="crrInfo"></small></div>
+    </div>
+  </details>
+
+  <details class="box">
+    <summary><h2>Pogoda</h2><span class="hint" id="h-wx"></span></summary>
+    <div class="fields">
+      <label class="f"><span>Temperatura</span><div class="unit"><input type="number" id="temp" min="-15" max="45" step="1" value="24"><b>°C</b></div></label>
+      <label class="f"><span>Wilgotność</span><div class="unit"><input type="number" id="rh" min="5" max="100" step="5" value="55"><b>%</b></div></label>
+      <label class="f"><span>Wiatr</span><div class="unit"><input type="number" id="wind" min="0" max="80" step="1" value="12"><b>km/h</b></div></label>
+      <label class="f"><span>Wieje z kierunku</span><select id="windDir">
+        <option value="var" selected>zmienny / pętla</option>
+        <option value="head">w twarz całą trasę</option>
+        <option value="tail">w plecy całą trasę</option>
+        <option value="0">N (z północy)</option>
+        <option value="45">NE</option>
+        <option value="90">E</option>
+        <option value="135">SE</option>
+        <option value="180">S</option>
+        <option value="225">SW</option>
+        <option value="270">W</option>
+        <option value="315">NW</option>
+      </select></label>
+      <div class="full wxget">
+        <label class="f"><span>Miejsce prognozy</span><input type="text" id="wxPlace" placeholder="np. Kraków" autocomplete="off"></label>
+        <label class="f"><span>Dzień</span><select id="wxDay"><option value="0">dziś</option><option value="1" selected>jutro</option></select></label>
+        <button type="button" class="btn primary" id="wxGet">Pobierz prognozę</button>
+        <small id="wxStatus">Średnia pogoda w godzinach jazdy, z serwisu Open-Meteo. Przy wczytanym GPX bierzemy punkt startu trasy.</small>
+      </div>
+      <div class="full f"><small id="wxInfo">Kierunek wiatru (N, E, S, W…) jest liczony odcinek po odcinku tylko dla wczytanego GPX.</small></div>
+    </div>
+  </details>
+
+  <details class="box" open>
+    <summary><h2>Wysiłek</h2><span class="hint" id="h-eff"></span></summary>
+    <div class="fields">
+      <div class="f full">
+        <span>Sposób liczenia tempa</span>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="mode" id="modeI" value="i" checked>Intensywność</label>
+          <label><input type="radio" name="mode" id="modeT" value="t">Docelowy czas</label>
+          <label><input type="radio" name="mode" id="modeS" value="s">Docelowa prędkość</label>
+        </div>
+      </div>
+      <div class="f full" id="f-int">
+        <div class="rangeval"><span>Średnio na płaskim</span><span><strong id="intVal">65%</strong> FTP <span class="zone" id="zone">Z2</span></span></div>
+        <input type="range" id="int" min="45" max="100" step="1" value="65" aria-label="Intensywność w procentach FTP">
+        <small>Na podjazdach model dokłada mocy, na zjazdach odpuszcza, tak jak jeździ się naprawdę.</small>
+      </div>
+      <label class="f full" id="f-tt" hidden><span>Czas jazdy bez postojów (gg:mm)</span><input type="text" id="ttime" value="5:30" inputmode="numeric" placeholder="5:30"></label>
+      <label class="f full" id="f-spd" hidden><span>Średnia prędkość jazdy (bez postojów)</span><div class="unit"><input type="number" id="tspeed" min="5" max="60" step="0.5" value="25"><b>km/h</b></div><small id="spdInfo"></small></label>
+      <label class="f"><span>Jedzenie co</span><select id="every">
+        <option value="15">15 min</option>
+        <option value="20" selected>20 min</option>
+        <option value="25">25 min</option>
+        <option value="30">30 min</option>
+        <option value="40">40 min</option>
+      </select></label>
+      <label class="f"><span>Pierwsze jedzenie po</span><select id="first">
+        <option value="15">15 min</option>
+        <option value="20">20 min</option>
+        <option value="30" selected>30 min</option>
+        <option value="45">45 min</option>
+      </select></label>
+      <label class="f"><span>Cel węgli ręcznie</span><div class="unit"><input type="number" id="carbOv" min="0" max="150" step="5" placeholder="auto"><b>g/h</b></div></label>
+      <label class="f full chk" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="solidEarly" checked style="width:18px;height:18px;accent-color:var(--accent)"><span style="text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink);font-weight:500">Stałe jedzenie w pierwszej połowie, żele później</span></label>
+    </div>
+  </details>
+
+  <details class="box" open>
+    <summary><h2>Bidony</h2><span class="hint" id="h-bottle"></span></summary>
+    <div class="fields">
+      <label class="f"><span>Liczba bidonów</span><select id="bN">
+        <option>1</option><option selected>2</option><option>3</option><option>4</option>
+      </select></label>
+      <label class="f"><span>Pojemność</span><select id="bV">
+        <option value="500">500 ml</option>
+        <option value="620">620 ml</option>
+        <option value="750" selected>750 ml</option>
+        <option value="950">950 ml</option>
+      </select></label>
+      <label class="f full"><span>Napój w bidonach</span><select id="drink"></select></label>
+      <label class="f"><span>Porcji na bidon</span><input type="number" id="dPor" min="0" max="4" step="0.5" value="1"></label>
+      <label class="f"><span>Bidonów z napojem</span><input type="number" id="mixN" min="0" max="30" step="1" value="2" placeholder="∞"><small>na całą trasę, reszta to sama woda</small></label>
+      <div class="diy" id="diy">
+        <label class="f"><span>Maltodekstryna</span><div class="unit"><input type="number" id="dMal" min="0" max="200" step="5" value="40"><b>g</b></div></label>
+        <label class="f"><span>Fruktoza</span><div class="unit"><input type="number" id="dFru" min="0" max="150" step="5" value="25"><b>g</b></div></label>
+        <label class="f"><span>Cukier (sacharoza)</span><div class="unit"><input type="number" id="dSuc" min="0" max="150" step="5" value="0"><b>g</b></div></label>
+        <label class="f"><span>Sól kuchenna</span><div class="unit"><input type="number" id="dSal" min="0" max="5" step="0.25" value="1"><b>g</b></div></label>
+        <div class="out" id="diyOut"></div>
+      </div>
+      <label class="f"><span>Elektrolity do bidonu</span><select id="elec"></select></label>
+      <label class="f"><span>Ile na bidon</span><input type="number" id="ePor" min="0" max="4" step="0.5" value="1"></label>
+    </div>
+  </details>
+
+  <details class="box" open>
+    <summary><h2>Twoje produkty</h2><span class="hint" id="h-prod"></span></summary>
+    <p class="note">Zaznacz, co masz. Ilość zostaw pustą, jeśli możesz dokupić dowolnie dużo. Plan użyje tylko zaznaczonych produktów.</p>
+    <label class="force" for="forceFood"><input type="checkbox" id="forceFood" role="switch" checked><span class="sw" aria-hidden="true"></span><span><strong>Zawsze uwzględniaj jedzenie</strong><small>Jedzenie z wpisaną ilością trafi do planu w całości, rozłożone równo na trasie.</small></span></label>
+    <div class="chips" id="chips"></div>
+    <div class="plist" id="plist"></div>
+    <div class="addp" id="addp">
+      <label class="f w4"><span>Dodaj własny produkt</span><input type="text" id="nName" placeholder="np. Żel Enervit, mój baton owsiany"></label>
+      <label class="f w2"><span>Rodzaj</span><select id="nType">
+        <option value="gel">żel</option><option value="chew">żelki / kostki</option><option value="bar">baton</option><option value="food">jedzenie</option><option value="drink">napój w proszku (porcja)</option><option value="elec">elektrolity do bidonu</option><option value="cap">kapsułka z solą</option>
+      </select></label>
+      <label class="f"><span>Węgle g</span><input type="number" id="nC" min="0" max="200" step="1"></label>
+      <label class="f"><span>Sód mg</span><input type="number" id="nNa" min="0" max="3000" step="10"></label>
+      <label class="f"><span>kcal</span><input type="number" id="nK" min="0" max="2000" step="5" placeholder="auto"></label>
+      <label class="f"><span>Kofeina mg</span><input type="number" id="nCaf" min="0" max="400" step="5"></label>
+      <label class="f w2"><span>Źródło cukru</span><select id="nR"><option value="m">glukoza + fruktoza</option><option value="g">sama glukoza / malto</option></select></label>
+      <div class="f w4" style="flex-direction:row;justify-content:flex-end"><button type="button" class="btn primary" id="nAdd">Dodaj produkt</button></div>
+    </div>
+    <p class="note">Wartości w bazie są przybliżone, z etykiet. Różnią się zależnie od smaku i wersji, więc sprawdź opakowanie albo dodaj produkt z własnymi danymi.</p>
+  </details>
+
+</aside>
+
+<section id="out" aria-live="polite"></section>
+</main>
+
+<template id="townTpl"><label class="townpick" id="f-towns"><span>Miejscowości</span><select id="townMin"><option value="0">nie pokazuj</option>
+        <option value="1000">od 1 000 mieszkańców</option>
+        <option value="2000">od 2 000 mieszkańców</option>
+        <option value="5000" selected>od 5 000 mieszkańców</option>
+        <option value="10000">od 10 000 mieszkańców</option>
+        <option value="20000">od 20 000 mieszkańców</option>
+        <option value="50000">od 50 000 mieszkańców</option>
+      </select></label></template>
+<footer class="wrap foot">
+  <p>Model: moc z równania oporów (toczenie, powietrze, grawitacja, sprawność napędu 97%). Wydatek energii to praca mechaniczna podzielona przez sprawność brutto. Udział węglowodanów rośnie z intensywnością. Zalecenia spożycia: 30–60 g/h na 1–2,5 h jazdy, 60–90 g/h i więcej na dłuższe jazdy przy wytrenowanym żołądku. Powyżej 60 g/h potrzebna jest mieszanka glukozy i fruktozy. Płyny: około 70–80% strat potu, nie więcej niż utrata. Sód: około 60% strat z potem.</p>
+  <p>To narzędzie planistyczne, nie porada medyczna. Kalkulator zakłada przeciętne pocenie (zależne od mocy, temperatury i wilgotności), przeciętne zasolenie potu (~900 mg sodu/l) i sprawność brutto 22,5%. U Ciebie te wartości mogą się różnić.</p>
+  <p>Miejscowości na profilu trasy: <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> (CC BY 4.0), dane z 2020 r. Polska od 1 000 mieszkańców, kraje sąsiednie od 5 000.</p>
+</footer>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id) || (id==='townMin' && typeof TOWN_EL!=='undefined' ? TOWN_EL.querySelector('select') : null);
+const clamp = (x,a,b) => Math.min(b,Math.max(a,x));
+const fmt = (n,d=0) => (isFinite(n)?n:0).toLocaleString('pl-PL',{minimumFractionDigits:d,maximumFractionDigits:d});
+const hm = min => { min=Math.max(0,Math.round(min)); return Math.floor(min/60)+':'+String(min%60).padStart(2,'0'); };
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const store = {
+  get(k){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+};
+
+/* ---------- baza ---------- */
+/* Listy produktów, napojów i elektrolitów są w pliku produkty.csv (obok index.html).
+   Tutaj zostają tylko pozycje, na których opiera się logika strony. */
+// [id, nazwa, typ, węgle g, kcal, sód mg, kofeina mg, źródło (g=glukoza, m=mieszanka), extra]
+const BUILTIN = [];
+// napoje: [id, nazwa, węgle/porcję, kcal, sód, kofeina, źródło]
+const DRINKS = [
+ ['water','Sama woda',0,0,0,0,''],
+ ['diy','Własna mieszanka: maltodekstryna + fruktoza',0,0,0,0,'m'],
+];
+// elektrolity do bidonu: [id, nazwa, sód mg]
+const ELEC = [
+ ['none','Bez elektrolitów',0],
+];
+
+/* ---------- wczytywanie plików CSV ---------- */
+function parseCSV(text){
+  text=text.replace(/^\ufeff/,'');
+  const sep = text.split(/\r?\n/,1)[0].includes(';') ? ';' : ',';
+  const rows=[]; let row=[], cur='', q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){ cur+='"'; i++; } else q=false; } else cur+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===sep){ row.push(cur); cur=''; }
+    else if(ch==='\n'||ch==='\r'){ if(ch==='\r'&&text[i+1]==='\n') i++; row.push(cur); cur=''; if(row.some(v=>v.trim()!=='')) rows.push(row); row=[]; }
+    else cur+=ch;
+  }
+  row.push(cur); if(row.some(v=>v.trim()!=='')) rows.push(row);
+  const head=rows.shift().map(h=>h.trim().toLowerCase());
+  return rows.map(r=>Object.fromEntries(head.map((h,i)=>[h,(r[i]??'').trim()])));
+}
+const csvNum = v => { const n=parseFloat(String(v??'').replace(',','.')); return isFinite(n)?n:0; };
+const KIND = {zel:'gel',żel:'gel',zelki:'chew',żelki:'chew',baton:'bar',jedzenie:'food',sol:'cap',sól:'cap',gel:'gel',chew:'chew',bar:'bar',food:'food',cap:'cap'};
+const SRC = v => /^g/i.test(v)?'g' : /^m/i.test(v)?'m' : '';
+async function fetchText(file){
+  const res = await fetch(file,{cache:'no-cache'});
+  if(!res.ok) throw new Error(`${file}: błąd ${res.status}`);
+  return res.text();
+}
+async function loadTyres(){
+  const groups=new Map();
+  for(const r of parseCSV(await fetchText('opony.csv'))){
+    const id=r.id, n=r.nazwa, c=csvNum(r.crr), cat=r.kategoria||'Inne';
+    if(!id || !n || !(c>0) || TYRE[id]) continue;
+    if(!groups.has(cat)) groups.set(cat,[]);
+    groups.get(cat).push([id,n,c]); TYRE[id]={n,c,cat};
+  }
+  groups.forEach((list,cat)=>TYRES.push([cat,list]));
+  TYRES.push(['Inne',[['custom','Własna wartość Crr',0]]]); TYRE.custom={n:'Własna wartość Crr',c:0,cat:'Inne'};
+}
+async function loadProducts(){
+  const seen=new Set(['water','diy','none']);
+  for(const r of parseCSV(await fetchText('produkty.csv'))){
+    const lista=(r.lista||'').toLowerCase(), id=r.id, n=r.nazwa;
+    if(!id || !n || seen.has(id)) continue; seen.add(id);
+    if(lista.startsWith('napo')) DRINKS.push([id,n,csvNum(r.wegle_g),csvNum(r.kcal),csvNum(r.sod_mg),csvNum(r.kofeina_mg),SRC(r.zrodlo_cukru)]);
+    else if(lista.startsWith('elektro')) ELEC.push([id,n,csvNum(r.sod_mg)]);
+    else BUILTIN.push([id,n,KIND[(r.rodzaj||'').toLowerCase()]||'food',csvNum(r.wegle_g),csvNum(r.kcal),csvNum(r.sod_mg),csvNum(r.kofeina_mg),SRC(r.zrodlo_cukru),{f:csvNum(r.plyn_ml)}]);
+  }
+}
+let READY=false;
+async function loadTowns(){
+  try{
+    TOWNS = parseCSV(await fetchText('miejscowosci.csv')).map(r=>({n:r.nazwa,lat:csvNum(r.szerokosc),lon:csvNum(r.dlugosc),pop:csvNum(r.ludnosc)})).filter(t=>t.n);
+    townCache.key=null; if(READY && GPX) recalc();
+  }catch(e){ console.warn('Nie wczytano miejscowości:',e.message); }
+}
+
+// opony: grupy [kategoria, [[id, nazwa, Crr], …]] wczytywane z pliku opony.csv
+const TYRES = [];
+// nawierzchnie: [id, nazwa, mnożnik Crr dla opony szosowej, mnożnik dla szerokiej opony gravel/MTB, max prędkość na zjazdach km/h]
+const SURF = [
+ ['asf1','Nowy asfalt',1.05,1.05,65],
+ ['asf2','Zwykły asfalt',1.25,1.2,60],
+ ['asf3','Stary asfalt (łaty, spękania)',1.6,1.4,50],
+ ['g1','Szuter Kat 1 – gładki, ubity',2.3,1.6,45],
+ ['g2','Szuter Kat 2 – trochę kamieni',3.1,2.1,38],
+ ['g3','Szuter Kat 3 – dziury, duża różnorodność kamieni',4.3,2.8,30],
+ ['g4','Szuter Kat 4 – dziury, piasek, błoto',5.8,3.7,24],
+];
+const SURFM = {}; SURF.forEach(([id,n,mr,mw,v])=>SURFM[id]={n,mr,mw,v});
+const TYRE = {};
+const TLABEL = {gel:'żel',chew:'żelki',bar:'baton',food:'jedzenie',cap:'sól',drink:'napój',elec:'elektrolity'};
+
+let custom = store.get('pnt-custom') || [];
+let avail = store.get('pnt-avail') || {
+  'sis-go':{on:true,q:'8'}, 'maurten-100caf':{on:true,q:'2'}, 'banan':{on:true,q:'2'},
+  'ryzowiec':{on:true,q:'2'}, 'clif':{on:true,q:'1'}, 'cola':{on:true,q:''}
+};
+let PROD = {};
+function buildProducts(){
+  PROD = {};
+  BUILTIN.forEach(([id,n,t,c,k,na,caf,r,x])=>PROD[id]={id,n,t,c,k,na,caf,r,f:(x&&x.f)||0});
+  custom.forEach(p=>PROD[p.id]={...p,custom:true});
+}
+function drinkList(){ return DRINKS.map(([id,n,c,k,na,caf,r])=>({id,n,c,k,na,caf,r})).concat(custom.filter(p=>p.t==='drink')); }
+function elecList(){ return ELEC.map(([id,n,na])=>({id,n,na})).concat(custom.filter(p=>p.t==='elec')); }
+
+/* ---------- formularz: opcje ---------- */
+function fillSelects(){
+  const ty = $('tyre'), cur = ty.value || 'gp5000str';
+  ty.innerHTML = TYRES.map(([cat,list])=>`<optgroup label="${cat}">`+list.map(([id,n,c])=>`<option value="${id}">${esc(n)}${c?` · Crr ${c.toFixed(4).replace('.',',')}`:''}</option>`).join('')+'</optgroup>').join('');
+  ty.value = TYRE[cur] ? cur : (ty.options[0]?.value||'custom');
+  ['surf1','surf2'].forEach((id,i)=>{ const el=$(id), c=el.value||(i?'g2':'asf2');
+    el.innerHTML = SURF.map(([sid,n])=>`<option value="${sid}">${n}</option>`).join(''); el.value = SURFM[c]?c:(i?'g2':'asf2'); });
+  const dr = $('drink'), dcur = dr.value || 'diy';
+  dr.innerHTML = drinkList().map(d=>`<option value="${d.id}">${esc(d.n)}${d.c?` · ${d.c} g węgli`:''}</option>`).join('');
+  dr.value = [...dr.options].some(o=>o.value===dcur)?dcur:'diy';
+  const el = $('elec'), ecur = el.value || 'none';
+  el.innerHTML = elecList().map(e=>`<option value="${e.id}">${esc(e.n)}${e.na?` · ${e.na} mg sodu`:''}</option>`).join('');
+  el.value = [...el.options].some(o=>o.value===ecur)?ecur:'none';
+}
+
+let filter = 'all';
+const FILTERS = [['all','Wszystkie'],['on','Zaznaczone'],['gel','Żele'],['chew','Żelki'],['bar','Batony'],['food','Jedzenie'],['cap','Sól']];
+function renderChips(){
+  $('chips').innerHTML = FILTERS.map(([k,n])=>`<button type="button" class="chip" data-f="${k}" aria-pressed="${filter===k}">${n}</button>`).join('');
+}
+function renderProducts(){
+  const list = Object.values(PROD).filter(p=>p.t!=='drink' && p.t!=='elec')
+    .filter(p=>filter==='all' || (filter==='on' ? avail[p.id]?.on : p.t===filter));
+  $('plist').innerHTML = list.map(p=>{
+    const a = avail[p.id]||{on:false,q:''};
+    const caf = p.caf?` <span class="tag t-caf">kofeina ${p.caf} mg</span>`:'';
+    return `<div class="prow ${a.on?'':'off'}">
+      <input type="checkbox" data-pid="${p.id}" id="pc-${p.id}" ${a.on?'checked':''} aria-label="Mam: ${esc(p.n)}">
+      <label for="pc-${p.id}"><div class="nm"><span class="tag t-${p.t}">${TLABEL[p.t]}</span>${esc(p.n)}${p.custom?`<button type="button" class="del" data-del="${p.id}">usuń</button>`:''}</div>
+      <div class="meta">${p.c} g węgli · ${p.na} mg Na · ${p.k} kcal${p.f?` · ${p.f} ml`:''}</div>${caf}</label>
+      <input class="q" type="number" min="-1" step="1" data-qid="${p.id}" id="pq-${p.id}" value="${esc(a.q||'')}" placeholder="∞" aria-label="Ilość: ${esc(p.n)}">
+    </div>`;
+  }).join('') || '<p class="note">Brak produktów w tej grupie.</p>';
+  const on = Object.keys(avail).filter(k=>avail[k].on && PROD[k]).length;
+  $('h-prod').textContent = on+' zaznaczonych';
+}
+
+/* ---------- stan formularza ---------- */
+const FIELDS = ['dist','gain','climbGrade','alt','surf1','surf2','surf2Pct','start','stops','mass','ftp','gut','gly','caf','bike','gear','pos','draft','tyre','crr','temp','rh','wind','windDir','wxPlace','wxDay','townMin','int','ttime','tspeed','every','first','carbOv','bN','bV','drink','dPor','mixN','dMal','dFru','dSuc','dSal','elec','ePor'];
+function saveForm(){
+  const s = {}; FIELDS.forEach(k=>s[k]=$(k).value);
+  s.mode = $('modeT').checked?'t':$('modeS').checked?'s':'i'; s.solidEarly = $('solidEarly').checked; s.forceFood = $('forceFood').checked;
+  store.set('pnt-form',s); store.set('pnt-avail',avail); store.set('pnt-custom',custom);
+}
+function loadForm(){
+  const s = store.get('pnt-form'); if(!s) return;
+  FIELDS.forEach(k=>{ if(s[k]!=null && $(k)) $(k).value = s[k]; });
+  if(s.mode==='t') $('modeT').checked = true;
+  if(s.mode==='s') $('modeS').checked = true;
+  if(s.solidEarly!=null) $('solidEarly').checked = s.solidEarly;
+  if(s.forceFood!=null) $('forceFood').checked = s.forceFood;
+}
+const num = (id,def=0) => { const v = parseFloat(String($(id).value).replace(',','.')); return isFinite(v)?v:def; };
+
+/* ---------- GPX ---------- */
+let GPX = null;
+const R_EARTH = 6371000, rad = d => d*Math.PI/180;
+function hav(a,b){
+  const dLat=rad(b.lat-a.lat), dLon=rad(b.lon-a.lon);
+  const h=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;
+  return 2*R_EARTH*Math.asin(Math.min(1,Math.sqrt(h)));
+}
+function bearing(a,b){
+  const y=Math.sin(rad(b.lon-a.lon))*Math.cos(rad(b.lat));
+  const x=Math.cos(rad(a.lat))*Math.sin(rad(b.lat))-Math.sin(rad(a.lat))*Math.cos(rad(b.lat))*Math.cos(rad(b.lon-a.lon));
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
+}
+function parseGPX(text){
+  const doc = new DOMParser().parseFromString(text,'application/xml');
+  if(doc.getElementsByTagName('parsererror').length) throw new Error('Plik nie jest poprawnym GPX.');
+  let nodes = [...doc.getElementsByTagName('trkpt')];
+  if(!nodes.length) nodes = [...doc.getElementsByTagName('rtept')];
+  if(nodes.length<2) throw new Error('W pliku nie ma punktów trasy (trkpt ani rtept).');
+  const pts = nodes.map(n=>{ const e=n.getElementsByTagName('ele')[0]; return {lat:+n.getAttribute('lat'),lon:+n.getAttribute('lon'),ele:e?parseFloat(e.textContent):NaN}; })
+    .filter(p=>isFinite(p.lat)&&isFinite(p.lon));
+  let last = pts.find(p=>isFinite(p.ele))?.ele ?? 0; const hasEle = pts.some(p=>isFinite(p.ele));
+  pts.forEach(p=>{ if(isFinite(p.ele)) last=p.ele; else p.ele=last; });
+  const cum=[0]; for(let i=1;i<pts.length;i++) cum.push(cum[i-1]+hav(pts[i-1],pts[i]));
+  // wygładzanie wysokości oknem ±60 m
+  const pre=[0]; pts.forEach((p,i)=>pre.push(pre[i]+p.ele));
+  const sm=new Array(pts.length); let lo=0,hi=0;
+  for(let i=0;i<pts.length;i++){
+    while(cum[i]-cum[lo]>60) lo++;
+    if(hi<i) hi=i;
+    while(hi+1<pts.length && cum[hi+1]-cum[i]<=60) hi++;
+    sm[i]=(pre[hi+1]-pre[lo])/(hi-lo+1);
+  }
+  let gain=0, loss=0, ref=sm[0];
+  for(let i=1;i<sm.length;i++){ const d=sm[i]-ref; if(d>=3){gain+=d;ref=sm[i];} else if(d<=-3){loss-=d;ref=sm[i];} }
+  // odcinki ~200 m
+  const segs=[]; let s=0;
+  for(let i=1;i<pts.length;i++){
+    if(cum[i]-cum[s]>=200 || i===pts.length-1){
+      const d=cum[i]-cum[s]; if(d<1){ s=i; continue; }
+      segs.push({d, g:clamp((sm[i]-sm[s])/d,-0.3,0.3), ele:(sm[i]+sm[s])/2, brg:bearing(pts[s],pts[i])});
+      s=i;
+    }
+  }
+  const step=Math.max(1,Math.floor(pts.length/700)); const prof=[];
+  for(let i=0;i<pts.length;i+=step) prof.push([cum[i]/1000,sm[i]]);
+  prof.push([cum[pts.length-1]/1000,sm[pts.length-1]]);
+  const name = doc.querySelector('trk > name, rte > name, metadata > name')?.textContent?.trim() || '';
+  const avgEle = sm.reduce((a,b)=>a+b,0)/sm.length;
+  const track=[]; let lastK=-1;
+  for(let i=0;i<pts.length;i++){ const k=cum[i]/1000; if(k-lastK>=0.1 || i===pts.length-1){ track.push([pts[i].lat,pts[i].lon,k]); lastK=k; } }
+  return {name, track, start:{lat:pts[0].lat,lon:pts[0].lon}, dist:cum[cum.length-1]/1000, gain, loss, segs, prof, hasEle, avgEle, minEle:Math.min(...sm), maxEle:Math.max(...sm)};
+}
+function loadGPXFile(file){
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      GPX = parseGPX(r.result); GPX.file = file.name;
+      $('dist').value = GPX.dist.toFixed(1); $('gain').value = Math.round(GPX.gain); $('alt').value = Math.round(GPX.avgEle/10)*10;
+      ['dist','gain','alt'].forEach(k=>$(k).disabled=true);
+      $('gpxTitle').textContent = GPX.name || file.name;
+      $('gpxInfo').textContent = `${fmt(GPX.dist,1)} km · ↑ ${fmt(GPX.gain)} m · ↓ ${fmt(GPX.loss)} m · ${fmt(GPX.minEle)}–${fmt(GPX.maxEle)} m n.p.m.`+(GPX.hasEle?'':' · brak wysokości w pliku');
+      $('gpxClearRow').hidden = false; $('f-cg').hidden = true;
+      toast('Wczytano ślad GPX'); recalc();
+    }catch(e){ GPX=null; $('gpxInfo').textContent = e.message; toast(e.message); }
+  };
+  r.readAsText(file);
+}
+function clearGPX(){
+  GPX=null; ['dist','gain','alt'].forEach(k=>$(k).disabled=false);
+  $('gpxTitle').textContent='Wczytaj ślad GPX';
+  $('gpxInfo').textContent='Dystans, przewyższenia, wysokość i kierunki odcinków policzą się same.';
+  $('gpxClearRow').hidden=true; $('f-cg').hidden=false; $('gpx').value=''; recalc();
+}
+
+/* miejscowości przy trasie */
+let TOWNS=null, townCache={key:null,list:[]};
+function townsNear(){
+  const min=+TOWN_EL.querySelector('select').value; if(!GPX || !min) return [];
+  const key=GPX.file+'|'+GPX.dist+'|'+min; if(townCache.key===key) return townCache.list;
+  if(!TOWNS) return [];
+  const tr=GPX.track; let la0=90,la1=-90,lo0=180,lo1=-180;
+  tr.forEach(([a,b])=>{ la0=Math.min(la0,a); la1=Math.max(la1,a); lo0=Math.min(lo0,b); lo1=Math.max(lo1,b); });
+  const out=[], seen=new Set();
+  for(const t of TOWNS){
+    if(t.pop<min || t.lat<la0-0.06 || t.lat>la1+0.06 || t.lon<lo0-0.09 || t.lon>lo1+0.09) continue;
+    // punkt GeoNames to centrum miejscowości, więc dla większych miast dopuszczamy większy promień
+    const lim = t.pop>=200000?5 : t.pop>=50000?3 : t.pop>=20000?1.8 : 1;
+    const cl=Math.cos(rad(t.lat)); let best=1e9, km=0;
+    for(const [a,b,k] of tr){ const dy=(a-t.lat)*111.2, dx=(b-t.lon)*111.2*cl, d=dx*dx+dy*dy; if(d<best){ best=d; km=k; } }
+    best=Math.sqrt(best);
+    if(best<=lim && !seen.has(t.n)){ seen.add(t.n); out.push({n:t.n,pop:t.pop,km,d:best}); }
+  }
+  out.sort((a,b)=>a.km-b.km);
+  townCache={key,list:out}; return out;
+}
+
+/* profil szacunkowy: płasko – podjazd – zjazd, powtórzone n razy */
+function synthRoute(Dkm,G,gradePct,alt){
+  const D=Dkm*1000; let g=Math.max(0.01,gradePct/100); let climb=G/g;
+  if(G>0 && 2*climb>D*0.9){ climb=D*0.45; g=G/climb; }
+  const n = G>0 ? clamp(Math.round(G/350),1,14) : 0;
+  const flat = (D-2*climb)/(n+1);
+  const pieces=[[flat,0]]; for(let i=0;i<n;i++){ pieces.push([climb/n,g],[climb/n,-g],[flat,0]); }
+  const segs=[], prof=[[0,alt]]; let e=alt, x=0;
+  for(const [len,gr] of pieces){
+    const k=Math.max(1,Math.round(len/200)), d=len/k;
+    for(let j=0;j<k;j++){ if(d<=0) continue; segs.push({d,g:gr,ele:e+gr*d/2}); e+=gr*d; x+=d; }
+    prof.push([x/1000,e]);
+  }
+  return {segs, prof, synth:true, gEff:g};
+}
+
+/* ---------- fizyka ---------- */
+function crrEff(){
+  const t=$('tyre').value, base = t==='custom' ? num('crr',0.004) : TYRE[t].c;
+  const wide = t!=='custom' && !/^szos/i.test(TYRE[t].cat);
+  const {s1,s2,p} = surfMix(), f = s => wide ? s.mw : s.mr;
+  return base*(f(s1)*(1-p)+f(s2)*p);
+}
+function surfMix(){
+  return {s1:SURFM[$('surf1').value]||SURFM.asf2, s2:SURFM[$('surf2').value]||SURFM.g2, p:clamp(num('surf2Pct'),0,100)/100};
+}
+function powerFactor(g){
+  if(g>0.02) return 1+Math.min(0.25,(g-0.02)*2.5);
+  if(g<-0.015) return Math.max(0,1-(-g-0.015)*14);
+  return 1;
+}
+function physics(route, base, P){
+  const out=[]; let T=0, D=0, work=0, metJ=0, cho=0, climbT=0;
+  for(const s of route.segs){
+    const th=Math.atan(s.g), ct=Math.cos(th), st=Math.sin(th);
+    const rho = 1.225*Math.exp(-(s.ele??P.alt)/8434)*288.15/(273.15+P.temp);
+    let vh = P.windMs*0.3;
+    if(P.windDir==='head') vh=P.windMs; else if(P.windDir==='tail') vh=-P.windMs;
+    else if(P.windDir!=='var' && s.brg!=null) vh = P.windMs*Math.cos(rad(+P.windDir - s.brg))*P.draft;
+    const need = v => { const va=v+vh; return (P.m*9.81*(P.crr*ct+st)*v + 0.5*rho*P.cda*va*Math.abs(va)*v)/0.97; };
+    let pw = base*powerFactor(s.g), v;
+    if(need(25)<pw) v=25; else if(need(0.5)>pw) v=0.5;
+    else { let a=0.5,b=25; for(let i=0;i<40;i++){ const m=(a+b)/2; if(need(m)<pw) a=m; else b=m; } v=(a+b)/2; }
+    if(v>P.vmax){ v=P.vmax; pw=Math.max(0,need(v)); }
+    if(v<1.1){ v=1.1; } // na stromej ściance i tak się idzie/pcha
+    const t=s.d/v, metW=Math.max(pw/P.eff,110), x=pw/P.ftp;
+    const frac = clamp(0.25+(x-0.4)*1.2,0.3,0.97);
+    const choG = metW*t/4184*frac/4;
+    T+=t; D+=s.d; work+=pw*t; metJ+=metW*t; cho+=choG; if(s.g>0.03) climbT+=t;
+    out.push({t0:T-t,t1:T,d1:D,g:s.g,pw,v,metW,frac,ele:s.ele});
+  }
+  return {segs:out, T:T/60, D:D/1000, kj:work/1000, kcal:metJ/4184, cho, avgP:work/T, climbT:climbT/60};
+}
+
+/* ---------- główne liczenie ---------- */
+function params(){
+  const ftp=num('ftp',250), mass=num('mass',75);
+  const {s1,s2,p} = surfMix();
+  return {
+    ftp, mass, m: mass+num('bike',8.5)+num('gear',3),
+    cda: num('pos',0.34)*num('draft',1), draft:num('draft',1),
+    crr: crrEff(), eff: 0.225, // przeciętna sprawność brutto kolarza
+    temp: num('temp',20), rh: num('rh',50), windMs: num('wind')/3.6, windDir: $('windDir').value,
+    alt: num('alt',200), vmax: (s1.v*(1-p)+s2.v*p)/3.6
+  };
+}
+function parseTime(s){ const m=String(s).trim().match(/^(\d{1,3})(?:[:.,h ](\d{1,2}))?$/); if(!m) return NaN; return (+m[1])*60+(+(m[2]||0)); }
+
+function choRec(hours){
+  if(hours<1) return 0; if(hours<1.5) return 30; if(hours<2.5) return 60; if(hours<3) return 90; return 120;
+}
+
+function compute(){
+  const P = params();
+  const route = GPX ? {segs:GPX.segs, prof:GPX.prof} : synthRoute(num('dist',100),num('gain'),num('climbGrade',5),P.alt);
+  const alerts=[];
+  let base, sim;
+  const byTime=$('modeT').checked, bySpeed=$('modeS').checked;
+  if(byTime || bySpeed){
+    // docelowa prędkość to po prostu docelowy czas: dystans / prędkość
+    const routeKm = route.segs.reduce((a,g)=>a+g.d,0)/1000, spd=num('tspeed',0);
+    const tt = byTime ? parseTime($('ttime').value) : (spd>0 ? routeKm/spd*60 : NaN);
+    const what = byTime ? `Czas ${hm(tt)}` : `Średnia ${fmt(spd,1)} km/h`;
+    if(!isFinite(tt)||tt<10){ alerts.push(['warn', byTime ? 'Wpisz docelowy czas jazdy jako gg:mm, np. 5:30.' : 'Wpisz docelową średnią prędkość w km/h, np. 25.']); base=0.65*P.ftp; sim=physics(route,base,P); }
+    else{
+      let a=0.2*P.ftp, b=1.4*P.ftp;
+      const tHi=physics(route,b,P).T, tLo=physics(route,a,P).T;
+      if(tt<tHi){ base=b; alerts.push(['crit',`${what} wymaga ponad 140% FTP. Najszybciej przy tych warunkach wyjdzie około ${hm(tHi)} (średnio ${fmt(routeKm/tHi*60,1)} km/h).`]); }
+      else if(tt>tLo){ base=a; }
+      else { for(let i=0;i<30;i++){ const m=(a+b)/2; if(physics(route,m,P).T>tt) a=m; else b=m; } base=(a+b)/2; }
+      sim=physics(route,base,P);
+    }
+  } else { base=num('int',65)/100*P.ftp; sim=physics(route,base,P); }
+
+  const T=sim.T, H=T/60, IF=sim.avgP/P.ftp;
+  const stops=Math.max(0,num('stops')), elapsed=T+stops;
+  const kcalH=sim.kcal/H, choBurnH=sim.cho/H;
+
+  /* węglowodany */
+  const gut=num('gut',90);
+  const ov=$('carbOv').value.trim()!=='' ? num('carbOv') : null;
+  let rec=choRec(H); if(IF<0.55) rec=Math.min(rec,60);
+  let target = ov!=null ? ov : Math.round(Math.min(rec,gut,choBurnH*0.95)/5)*5;
+  target=Math.max(0,target);
+
+  /* płyny i sód */
+  const heat = sim.avgP*(1/P.eff-1);
+  let env = clamp(0.45+0.025*(P.temp-10),0.2,1.15)*clamp(1+0.3*(P.rh-50)/50,0.85,1.3);
+  const sweat = clamp(heat*3600/2.43e6*env,0.25,2.5); // przeciętne pocenie
+  const fluidH = clamp(Math.round(sweat*0.75/0.05)*0.05,0.3,1.0);
+  const naConc=900; // przeciętne zasolenie potu, mg sodu/l
+  const naH = clamp(Math.round(sweat*naConc*0.6/10)*10, 200, 1200);
+
+  /* bidony */
+  const bN=+$('bN').value, bV=+$('bV').value;
+  const drinkId=$('drink').value; let drink=drinkList().find(d=>d.id===drinkId)||{id:'water',c:0,na:0,caf:0,r:''};
+  if(drink.id==='diy') drink=diyProduct();
+  const dPor = Math.max(0,num('dPor',1));
+  const elec = elecList().find(e=>e.id===$('elec').value)||{na:0};
+  const ePor = Math.max(0,num('ePor',1));
+  const carbsPerCarbBottle = drink.c*dPor;
+  const naPerBottleE = elec.na*ePor;
+  // ograniczona liczba bidonów z mieszanką: pijemy je najpierw, potem już sama woda
+  const fluidTot=fluidH*H, bottlesTot=Math.max(bN,Math.ceil(fluidTot/(bV/1000)-0.05));
+  const mixRaw=String($('mixN').value).trim();
+  const mixB = drink.id==='water' ? 0 : Math.min(bottlesTot, mixRaw===''?Infinity:Math.max(0,Math.floor(+mixRaw)||0));
+  const share = mixB>0?1:0;
+  const carbPerL = carbsPerCarbBottle/(bV/1000), mixNaPerL = drink.na*dPor/(bV/1000), elecNaPerL = naPerBottleE/(bV/1000);
+  const mixH = mixB*bV/1000/fluidH;
+  const drinkCarbTo = tm => mixB ? fluidH*carbPerL*Math.min(tm/60,mixH) : 0;
+  const drinkNaTo = tm => fluidH*(elecNaPerL*tm/60 + (mixB?mixNaPerL*Math.min(tm/60,mixH):0));
+  const drinkCarbH = mixB ? fluidH*carbPerL : 0; // podczas picia mieszanki
+  const conc = carbsPerCarbBottle/(bV/1000);
+  const hiCarbDrink=['maurten160','maurten320','sisbf','nd90d'].includes(drink.id); // napoje projektowane na wysokie stężenie
+  if(share>0 && (conc>(hiCarbDrink?200:100))) alerts.push(['warn',`Stężenie napoju to ${fmt(conc)} g/l. Powyżej ~90 g/l napój wolniej opuszcza żołądek. Rozważ większy bidon albo mniej proszku.`]);
+
+  /* oś czasu */
+  const segs=sim.segs;
+  const kmAt = tm => { const s=tm*60; let lo=0,hi=segs.length-1; while(lo<hi){ const m=(lo+hi)>>1; if(segs[m].t1<s) lo=m+1; else hi=m; } const g=segs[lo]; if(!g) return 0; const d0=g.d1-g.v*(g.t1-g.t0); return (d0+g.v*(s-g.t0))/1000; };
+  const segAt = tm => { const s=tm*60; let lo=0,hi=segs.length-1; while(lo<hi){ const m=(lo+hi)>>1; if(segs[m].t1<s) lo=m+1; else hi=m; } return segs[lo]; };
+  // napój z węglami pijemy tylko z pierwszych bidonów, więc ocena dotyczy tego odcinka jazdy
+  if(mixB && drinkCarbH>target+5 && ov==null && target>0){
+    const mixMin=Math.min(T,mixH*60), avgH=drinkCarbTo(T)/H, over=drinkCarbH>gut;
+    alerts.push([over?'crit':'warn',`Przez pierwsze ${hm(mixMin)} jazdy (do ok. km ${fmt(kmAt(mixMin))}) pijesz ${mixB} ${mixB===1?'bidon':mixB<5?'bidony':'bidonów'} z napojem i sam napój daje wtedy ok. ${fmt(drinkCarbH)} g węgli/h. To więcej niż cel ${target} g/h${over?` i więcej niż Twoja tolerancja ${gut} g/h, co grozi problemami żołądkowymi`:''}. W tym czasie plan nie daje innego jedzenia. Zmniejsz liczbę porcji na bidon albo rozłóż tę samą ilość proszku na więcej bidonów.`]);
+  }
+  const gradeAhead = tm => { let mx=-1; for(let k=0;k<=4;k++){ const s=segAt(Math.min(T,tm+k)); if(s) mx=Math.max(mx,s.g); } return mx; };
+
+  /* plan jedzenia */
+  const every=+$('every').value, first=+$('first').value;
+  const solidH = Math.max(0,target-drinkCarbTo(T)/H);
+  const cafMax = num('caf',3)*P.mass;
+  const solidEarly=$('solidEarly').checked;
+  const stock={}; Object.keys(avail).forEach(id=>{ const a=avail[id]; if(a.on && PROD[id]){ const q=String(a.q??'').trim(); stock[id] = q===''?Infinity:Math.max(0,Math.floor(+q)||0); } });
+  const foods = Object.keys(stock).map(id=>PROD[id]).filter(p=>p.t!=='cap' && p.c>0);
+  const caps = Object.keys(stock).map(id=>PROD[id]).filter(p=>p.t==='cap');
+  const used={}; let cafTot=0, debt=0, naGot=0, shortG=0, fluidExtra=0;
+  const events=[];
+  const slots=[]; if(H>=0.75 || target>0){ for(let t=first; t<=T-8; t+=every) slots.push(t); }
+  const perSlot = solidH*every/60;
+  // jedzenie z wpisaną ilością: zawsze w planie, rozłożone równo po punktach jedzenia
+  const forced = $('forceFood').checked ? Object.keys(stock).map(id=>PROD[id]).filter(p=>p.t==='food' && p.c>0 && isFinite(stock[p.id]) && stock[p.id]>0) : [];
+  const forcedIds = new Set(forced.map(p=>p.id)), forcedAt = slots.map(()=>[]);
+  if(forced.length && slots.length){
+    const left = Object.fromEntries(forced.map(p=>[p.id,stock[p.id]])), units=[];
+    while(forced.some(p=>left[p.id]>0)) forced.forEach(p=>{ if(left[p.id]>0){ units.push(p); left[p.id]--; } });
+    units.forEach((p,k)=>forcedAt[Math.min(slots.length-1,Math.floor((k+0.5)*slots.length/units.length))].push(p));
+  }
+  let lastT=0;
+  slots.forEach((t,si)=>{
+    const frac=t/T, ahead=gradeAhead(t);
+    const prev = si ? slots[si-1] : 0; // pierwsza porcja pokrywa czas od startu
+    debt = Math.max(-10, debt + target*(t-prev)/60 - (drinkCarbTo(t)-drinkCarbTo(prev)));
+    const items=[]; let tries=0;
+    for(const p of forcedAt[si]){ items.push(p); used[p.id]=(used[p.id]||0)+1; debt-=p.c; naGot+=p.na; fluidExtra+=p.f||0; }
+    while(debt>8 && tries<2){
+      tries++;
+      const steep = ahead>0.05;
+      const order = (solidEarly && frac<0.5 && !steep) ? ['bar','food','chew','gel'] : steep ? ['gel','chew','food','bar'] : ['gel','chew','food','bar'];
+      let best=null, bestScore=1e9;
+      for(const p of foods){
+        if(forcedIds.has(p.id) || (stock[p.id]-(used[p.id]||0))<=0) continue;
+        if(p.caf){ if(cafMax<=0 || frac<0.45 || cafTot+p.caf>cafMax) continue; }
+        if(p.c>debt+14 && items.length) continue;
+        let sc=Math.abs(debt-p.c)+order.indexOf(p.t)*6;
+        if(p.caf && frac>=0.6) sc-=10;
+        if(p.t==='food' && frac>0.8 && !solidEarly) sc+=4;
+        if(p.c>debt+14) sc+=(p.c-debt)*1.5;
+        if(sc<bestScore){ bestScore=sc; best=p; }
+      }
+      if(!best) break;
+      if(best.c>debt+20 && debt<best.c*0.6) break; // poczekaj do kolejnego okna
+      items.push(best); used[best.id]=(used[best.id]||0)+1; debt-=best.c; cafTot+=best.caf; naGot+=best.na; fluidExtra+=best.f||0;
+    }
+    if(!foods.some(p=>!forcedIds.has(p.id) && (stock[p.id]-(used[p.id]||0))>0) && debt>15){ shortG=Math.max(shortG,debt); }
+    // sód: kapsułki, gdy niedobór
+    const naNeed = naH*t/60 - (drinkNaTo(t) + naGot);
+    if(caps.length && naNeed>0){
+      const c=caps.find(c=>(stock[c.id]-(used[c.id]||0))>0);
+      if(c && naNeed>=c.na*0.8 && H>=1.5){ items.push(c); used[c.id]=(used[c.id]||0)+1; naGot+=c.na; }
+    }
+    events.push({t, km:kmAt(t), type:'feed', items, grade:segAt(t)?.g||0, ahead});
+    lastT=t;
+  });
+  if(debt>15 && slots.length) shortG=Math.max(shortG,debt);
+
+  /* bidony: kiedy puste */
+  const carried=bN*bV/1000;
+  const refills=[]; for(let k=1; carried*k<fluidTot-0.05; k++){ const t=carried*k/fluidH*60; if(t<T) refills.push(t); }
+  refills.forEach((t,j)=>{ const mix=Math.min(bN,Math.max(0,mixB-(j+1)*bN)); events.push({t, km:kmAt(t), type:'refill', mix, water:bN-mix}); });
+  events.sort((a,b)=>a.t-b.t);
+  const carbBottles = mixB;
+
+  /* glikogen */
+  const G0 = P.mass*num('gly',6);
+  const intakeMin = new Float64Array(Math.ceil(T)+2);
+  events.forEach(e=>{ if(e.type==='feed') e.items.forEach(p=>{ intakeMin[Math.min(intakeMin.length-1,Math.round(e.t))]+=p.c; }); });
+  const absMax = Math.max(gut,60)/60*1.1;
+  let G=G0, Gn=G0, pool=0, gMin=G0, gMinT=0, lowT=null; const gc=[[0,100,100]];
+  for(let mi=1; mi<=Math.ceil(T); mi++){
+    const s=segAt(Math.min(T,mi-0.5)); const use = s? s.metW*60/4184*s.frac/4 : 0;
+    const dr = (mi/60<=mixH ? drinkCarbH : 0)/60;
+    pool += intakeMin[mi-1] + dr;
+    const ab=Math.min(pool*0.07+Math.min(pool,dr), absMax, pool); pool-=ab;
+    G -= Math.max(use*0.3,use-ab); // mięśnie zawsze sięgają po część własnego glikogenu
+    Gn -= use;
+    G=Math.max(G,0); Gn=Math.max(Gn,0);
+    if(G<gMin){ gMin=G; gMinT=mi; } if(lowT==null && G<G0*0.25) lowT=mi;
+    if(mi%3===0 || mi===Math.ceil(T)) gc.push([mi, G/G0*100, Gn/G0*100]);
+  }
+
+  /* sumy */
+  let solidC=0, solidNa=0, solidK=0;
+  Object.keys(used).forEach(id=>{ const p=PROD[id]; solidC+=p.c*used[id]; solidNa+=p.na*used[id]; solidK+=p.k*used[id]; });
+  const drinkC = drinkCarbTo(T), drinkNa = drinkNaTo(T);
+  const totC = solidC+drinkC, totNa=solidNa+drinkNa, totIn = fluidTot + fluidExtra/1000;
+  const sweatTot = sweat*H, lossKg = Math.max(0,sweatTot - totIn), lossPct = lossKg/P.mass*100;
+
+  /* ostrzeżenia */
+  if(H<1) alerts.push(['ok','Na jazdę krótszą niż godzina wystarczy woda. Jedzenie na trasie nie jest potrzebne.']);
+  if(shortG>15) alerts.push(['crit',`Zaznaczonych produktów jest za mało. Brakuje ok. ${fmt(shortG)} g węgli. Zaznacz więcej produktów, zwiększ ich ilość albo dodaj węgli do bidonów.`]);
+  const glucoseOnly = Object.keys(used).reduce((a,id)=>a+(PROD[id].r==='g'?PROD[id].c*used[id]:0),0) + (drink.r==='g'?drinkC:0);
+  if(target>60 && totC>0 && glucoseOnly/totC>0.6) alerts.push(['warn',`Cel to ${target} g/h, a większość węgli pochodzi z samej glukozy lub maltodekstryny. Jelita wchłoną jej najwyżej ~60 g/h. Dołóż fruktozę, czyli żele 2:1 lub 1:0,8, owoce albo fruktozę do bidonu.`]);
+  if(lossPct>2) alerts.push(['warn',`Szacowana utrata masy to ${fmt(lossPct,1)}% (${fmt(lossKg,1)} kg). Powyżej 2% spada wydolność. Pij trochę więcej, zwłaszcza w upale.`]);
+  if(P.temp>=28) alerts.push(['warn','Upał: zacznij pić od pierwszych minut. Możesz wziąć dodatkowy bidon z lodem albo polewać się wodą na postojach.']);
+  if(cafTot>0 && cafTot>cafMax) alerts.push(['warn','Plan przekracza limit kofeiny.']);
+  const naShort = naH*H - totNa;
+  if(H>=2 && naShort>naH*0.6 && !caps.length) alerts.push(['warn',`Sodu brakuje ok. ${fmt(naShort)} mg względem celu. Dodaj elektrolity do bidonów, sól do mieszanki albo zaznacz kapsułki z solą.`]);
+  if(!alerts.some(a=>a[0]!=='ok') && H>=1) alerts.push(['ok','Plan pokrywa cel węglowodanów i płynów.']);
+
+  return {P, route, sim, T, H, IF, elapsed, stops, kcalH, choBurnH, target, rec, gut, sweat, fluidH, naH, naConc,
+    drink, share, dPor, elec, ePor, bN, bV, carbsPerCarbBottle, drinkCarbH, drinkCarbTo, mixB, mixH, carbPerL,
+    events, used, refills, bottlesTot, carbBottles, fluidTot, G0, gMin, gc, lowT, totC, totNa, solidC, solidK, drinkC, totIn,
+    sweatTot, lossKg, lossPct, cafTot, cafMax, alerts, kmAt, every, solidH};
+}
+
+function diyProduct(){
+  const m=num('dMal'), f=num('dFru'), s=num('dSuc'), salt=num('dSal');
+  const c=m+f+s, glu=m+s/2, fru=f+s/2;
+  return {id:'diy', n:'Własna mieszanka', c, k:c*4, na:Math.round(salt*390), caf:0, r: fru>0?'m':'g', glu, fru, m, f, s, salt};
+}
+function diyInfo(){
+  const d=diyProduct(), bV=+$('bV').value;
+  const ratio = d.fru>0 ? `glukoza : fruktoza = 1 : ${fmt(d.fru/Math.max(1,d.glu),2)}` : 'sama glukoza, bez fruktozy';
+  $('diyOut').textContent = `Na bidon ${bV} ml: ${fmt(d.c)} g węgli (${fmt(d.c/bV*1000)} g/l), ${fmt(d.na)} mg sodu, ${fmt(d.k)} kcal. ${ratio}.`;
+}
+
+/* ---------- rysowanie ---------- */
+const ICON_T = {gel:'var(--carb)',chew:'var(--carb)',bar:'var(--food)',food:'var(--food)',cap:'var(--salt)'};
+function profileSVG(r){
+  const towns = GPX ? townsNear() : [];
+  const band = towns.length ? 64 : 0;
+  const W=1000,H=330+band,L=46,R=12,T=14+band,B=30;
+  const prof = r.route.prof; const maxKm = prof[prof.length-1][0]||1;
+  let lo=Math.min(...prof.map(p=>p[1])), hi=Math.max(...prof.map(p=>p[1]));
+  if(hi-lo<50){ hi+=25; lo-=25; } const pad=(hi-lo)*0.12; lo=Math.max(0,lo-pad); hi+=pad;
+  const x=k=>L+(k/maxKm)*(W-L-R), y=e=>T+(1-(e-lo)/(hi-lo))*(H-T-B);
+  const line = prof.map((p,i)=>(i?'L':'M')+x(p[0]).toFixed(1)+' '+y(p[1]).toFixed(1)).join(' ');
+  const area = line+` L${x(maxKm).toFixed(1)} ${H-B} L${L} ${H-B} Z`;
+  const kmStep = niceStep(maxKm,8), eStep=niceStep(hi-lo,4);
+  let g='';
+  for(let e=Math.ceil(lo/eStep)*eStep; e<=hi; e+=eStep) g+=`<line x1="${L}" x2="${W-R}" y1="${y(e)}" y2="${y(e)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${y(e)+4}" text-anchor="end">${fmt(e)}</text>`;
+  for(let k=0;k<=maxKm+0.01;k+=kmStep) g+=`<text x="${x(k)}" y="${H-B+16}" text-anchor="middle">${fmt(k)}</text>`;
+  const scale = r.sim.D/maxKm || 1;
+  let marks='';
+  PROF = {W,H,L,R,T,B,maxKm,prof,x,y,scale,marks:[],towns:[]};
+  // etykiety miejscowości: najpierw większe, bez nachodzenia na siebie
+  const eleAt=k=>{ let i=1; while(i<prof.length-1 && prof[i][0]<k) i++; const a=prof[i-1], b=prof[i]; return b[0]>a[0]? a[1]+(b[1]-a[1])*(k-a[0])/(b[0]-a[0]) : a[1]; };
+  const kept=[];
+  [...towns].sort((a,b)=>b.pop-a.pop).forEach(t=>{ const xx=x(t.km); if(kept.every(o=>Math.abs(o.x-xx)>15)) kept.push({...t,x:xx}); });
+  let tl='';
+  kept.sort((a,b)=>a.x-b.x).forEach(t=>{
+    const flip=t.x>W-R-80; // przy prawej krawędzi napis idzie w lewo, żeby się nie uciął
+    const yl=y(eleAt(t.km)), big=t.pop>=50000, nm=t.n.length>18?t.n.slice(0,17)+'…':t.n;
+    tl+=`<line x1="${t.x}" x2="${t.x}" y1="${T-6}" y2="${yl}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="1 3"/><circle cx="${t.x}" cy="${yl}" r="2.5" fill="var(--ink)"/><circle cx="${t.x}" cy="${T-6}" r="${big?3.5:2.5}" fill="var(--ink)"/>
+      <text x="${flip?t.x-3:t.x+3}" y="${T-10}" text-anchor="${flip?'end':'start'}" transform="rotate(${flip?40:-40} ${flip?t.x-3:t.x+3} ${T-10})" style="fill:var(--ink);font-family:var(--f-body);font-size:${big?12.5:11.5}px;font-weight:${big?600:500}">${esc(nm)}</text>`;
+    PROF.towns.push({x:t.x,y:T-6,t});
+  });
+  g+=tl;
+  r.events.forEach(e=>{
+    const xx=x(e.km/scale);
+    if(e.type==='refill') PROF.marks.push({x:xx, y:T+5, e});
+    if(e.type==='refill'){ marks+=`<line x1="${xx}" x2="${xx}" y1="${T}" y2="${H-B}" stroke="var(--water)" stroke-width="1.5" stroke-dasharray="4 3"/><circle cx="${xx}" cy="${T+5}" r="5" fill="var(--water)"/>`; }
+    else if(e.items.length){
+      // każdy rodzaj produktu na własnej wysokości; żele najniżej
+      const kinds=[...new Set(e.items.map(mkKind))].sort((a,b)=>MK[a].lv-MK[b].lv);
+      const yOf=k=>H-B-MK[k].lv*(H-T-B), top=yOf(kinds[kinds.length-1]);
+      marks+=`<line x1="${xx}" x2="${xx}" y1="${H-B}" y2="${top}" stroke="${MK[kinds[kinds.length-1]].c}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+      kinds.forEach(k=>{ const yy=yOf(k), m=MK[k]; marks+= m.ring ? `<circle cx="${xx}" cy="${yy}" r="4.5" fill="var(--panel)" stroke="${m.c}" stroke-width="2.5"/>` : `<circle cx="${xx}" cy="${yy}" r="5.5" fill="${m.c}"/>`; PROF.marks.push({x:xx, y:yy, e}); });
+    }
+  });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Profil wysokości trasy z punktami jedzenia">
+    ${g}<path d="${area}" fill="color-mix(in srgb, var(--accent) 14%, transparent)"/><path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+    ${marks}<text x="${W-R}" y="${H-4}" text-anchor="end">km</text><text x="${L-6}" y="${T-2}" text-anchor="end">m</text>
+    <g id="pHover" visibility="hidden" pointer-events="none"><line id="pHl" y1="${T}" y2="${H-B}" stroke="var(--ink)" stroke-width="1" stroke-dasharray="2 3" opacity=".55"/><circle id="pHd" r="5" fill="var(--panel)" stroke="var(--accent)" stroke-width="2.5"/><circle id="pHm" r="8" fill="none" stroke="var(--ink)" stroke-width="1.5"/></g></svg>`;
+}
+let PROF=null;
+// znaczniki na profilu: wysokość (ułamek wykresu od dołu), kolor, pełna kropka lub pierścień
+const MK = {
+  gel:{lv:.16,c:'var(--carb)',n:'żel'}, chew:{lv:.30,c:'var(--carb)',ring:1,n:'żelki'},
+  caf:{lv:.44,c:'var(--caf)',n:'z kofeiną'}, bar:{lv:.58,c:'var(--food)',ring:1,n:'baton'},
+  food:{lv:.72,c:'var(--food)',n:'jedzenie'}, cap:{lv:.84,c:'var(--salt)',n:'sól'}
+};
+const mkKind = p => p.caf ? 'caf' : (MK[p.t] ? p.t : 'food');
+/* dymek nad profilem trasy */
+function bindProfileTip(r){
+  const box=$('profBox'); if(!box||!PROF) return;
+  const svg=box.querySelector('svg'), tip=$('profTip'), P=PROF;
+  const hv=$('pHover'), hl=$('pHl'), hd=$('pHd'), hm=$('pHm');
+  const timeAtKm = km => { const m=km*P.scale*1000, s=r.sim.segs; let lo=0,hi=s.length-1; while(lo<hi){ const k=(lo+hi)>>1; if(s[k].d1<m) lo=k+1; else hi=k; } const g=s[lo]; if(!g) return 0; const d0=g.d1-g.v*(g.t1-g.t0); return (g.t0+Math.max(0,m-d0)/g.v)/60; };
+  const hide=()=>{ tip.hidden=true; hv.setAttribute('visibility','hidden'); };
+  const show=(cx,cy,html)=>{
+    tip.innerHTML=html; tip.hidden=false;
+    const bw=box.clientWidth, tw=tip.offsetWidth, th=tip.offsetHeight;
+    let left=cx+14; if(left+tw>bw) left=cx-14-tw; left=Math.max(0,left);
+    let top=cy-th-10; if(top<0) top=cy+16;
+    tip.style.left=left+'px'; tip.style.top=top+'px';
+  };
+  svg.addEventListener('pointerleave',hide);
+  svg.addEventListener('pointermove',ev=>{
+    const rc=svg.getBoundingClientRect(), k=P.W/rc.width;
+    const sx=(ev.clientX-rc.left)*k, sy=(ev.clientY-rc.top)*k;
+    if(sx<P.L-4||sx>P.W-P.R+4){ hide(); return; }
+    const bx=ev.clientX-box.getBoundingClientRect().left, by=ev.clientY-box.getBoundingClientRect().top;
+    // miejscowości w pasie nad wykresem
+    if(sy<P.T && P.towns.length){
+      let bt=null, bdx=12*k; for(const o of P.towns){ const dx=Math.abs(o.x-sx); if(dx<bdx){ bdx=dx; bt=o; } }
+      if(bt){ hv.setAttribute('visibility','visible'); hl.setAttribute('x1',bt.x); hl.setAttribute('x2',bt.x); hd.setAttribute('visibility','hidden'); hm.setAttribute('visibility','visible'); hm.setAttribute('cx',bt.x); hm.setAttribute('cy',bt.y);
+        const t=bt.t; show(bx,by,`<b>km ${fmt(t.km*P.scale,1)} · ok. ${hm_(timeAtKm(t.km))} jazdy</b><span class="tt-k" style="--c:var(--ink)">${esc(t.n)}</span><span>${fmt(t.pop)} mieszkańców · centrum ${t.d<0.1?'na trasie':fmt(t.d,1)+' km od trasy'}</span>`); return; }
+      hide(); return;
+    }
+    // najpierw znaczniki jedzenia i wody
+    let best=null, bd=14*k;
+    for(const m of P.marks){ const dx=Math.abs(m.x-sx); if(dx<bd && (m.e.type==='refill' || Math.abs(m.y-sy)<22*k)){ bd=dx; best=m; } }
+    hv.setAttribute('visibility','visible');
+    if(best){
+      const e=best.e;
+      hl.setAttribute('x1',best.x); hl.setAttribute('x2',best.x);
+      hd.setAttribute('visibility','hidden'); hm.setAttribute('visibility','visible'); hm.setAttribute('cx',best.x); hm.setAttribute('cy',best.y);
+      let html=`<b>${hm_(e.t)} jazdy · km ${fmt(e.km)}</b>`;
+      if(e.type==='refill') html+=`<span class="tt-k" style="--c:var(--water)">Uzupełnienie bidonów</span><span>${e.mix?`${e.mix}× ${r.bV} ml z napojem`:''}${e.mix&&e.water?', ':''}${e.water?`${e.water}× ${r.bV} ml wody`:''}</span>`;
+      else { html+=`<span class="tt-k" style="--c:${MK[mkKind(e.items[0])].c}">Punkt jedzenia</span>`;
+        e.items.forEach(p=>html+=`<span>${esc(p.n)} · ${p.c?p.c+' g węgli':p.na+' mg sodu'}${p.caf?` · ${p.caf} mg kofeiny`:''}</span>`); }
+      show(bx,by,html); return;
+    }
+    // profil wysokości
+    const km=clamp((sx-P.L)/(P.W-P.L-P.R)*P.maxKm,0,P.maxKm), pr=P.prof;
+    let i=1; while(i<pr.length-1 && pr[i][0]<km) i++;
+    const a=pr[i-1], b=pr[i], f=b[0]>a[0]?(km-a[0])/(b[0]-a[0]):0, el=a[1]+(b[1]-a[1])*f;
+    let j0=i-1, j1=i; while(j0>0 && km-pr[j0][0]<0.25) j0--; while(j1<pr.length-1 && pr[j1][0]-km<0.25) j1++;
+    const gr=pr[j1][0]>pr[j0][0]?(pr[j1][1]-pr[j0][1])/((pr[j1][0]-pr[j0][0])*1000)*100:0;
+    hl.setAttribute('x1',P.x(km)); hl.setAttribute('x2',P.x(km));
+    hm.setAttribute('visibility','hidden'); hd.setAttribute('visibility','visible'); hd.setAttribute('cx',P.x(km)); hd.setAttribute('cy',P.y(el));
+    show(bx,by,`<b>km ${fmt(km*P.scale,1)} · ok. ${hm_(timeAtKm(km))} jazdy</b><span class="tt-k" style="--c:var(--accent)">Profil wysokości</span><span>${fmt(el)} m n.p.m. · nachylenie ${gr>=0?'+':''}${fmt(gr,1)}%</span>`);
+  });
+}
+const hm_ = hm;
+function niceStep(range,n){ const raw=range/n, p=10**Math.floor(Math.log10(raw||1)), m=raw/p; return (m<1.5?1:m<3?2:m<7?5:10)*p; }
+
+function clockAt(r,t){
+  const s=$('start').value; if(!s) return '';
+  const [h,m]=s.split(':').map(Number); const tot=h*60+m + t*(r.elapsed/r.T);
+  const mm=Math.round(tot)%(24*60); return String(Math.floor(mm/60)).padStart(2,'0')+':'+String(mm%60).padStart(2,'0');
+}
+function zoneOf(p){ return p<56?'Z1 regeneracja':p<76?'Z2 wytrzymałość':p<91?'Z3 tempo':p<106?'Z4 próg':'Z5'; }
+
+function render(r){
+  const P=r.P, fluidSlot=Math.round(r.fluidH*r.every/60*1000/10)*10;
+  const drinkName = r.share===0 ? 'woda' : r.drink.id==='diy' ? 'własna mieszanka' : r.drink.n;
+  const alerts = r.alerts.map(([lv,t])=>`<div class="alert ${lv}"><b class="pill">${lv==='crit'?'uwaga':lv==='warn'?'sprawdź':'ok'}</b><span>${esc(t)}</span></div>`).join('');
+
+  const stats = `<div class="stats">
+    <div class="stat"><span class="k">Czas jazdy</span><span class="v">${hm(r.T)}</span><span class="d">${fmt(r.sim.D/r.H,1)} km/h · z postojami ${hm(r.elapsed)}</span></div>
+    <div class="stat"><span class="k">Śr. moc</span><span class="v">${fmt(r.sim.avgP)}<small>W</small></span><span class="d">${fmt(r.IF*100)}% FTP · TSS ≈ ${fmt(r.H*r.IF*r.IF*100)}</span></div>
+    <div class="stat"><span class="k">Wydatek energii</span><span class="v">${fmt(r.sim.kcal)}<small>kcal</small></span><span class="d">${fmt(r.kcalH)} kcal/h · ${fmt(r.sim.kj)} kJ</span></div>
+    <div class="stat"><span class="k"><i style="background:var(--carb)"></i>Węglowodany</span><span class="v">${r.target}<small>g/h</small></span><span class="d">razem ${fmt(r.totC)} g · spalasz ${fmt(r.choBurnH)} g/h</span></div>
+    <div class="stat"><span class="k"><i style="background:var(--water)"></i>Płyny</span><span class="v">${fmt(r.fluidH,2)}<small>l/h</small></span><span class="d">razem ${fmt(r.fluidTot,1)} l · pot ${fmt(r.sweat,2)} l/h</span></div>
+    <div class="stat"><span class="k"><i style="background:var(--salt)"></i>Sód</span><span class="v">${fmt(r.naH)}<small>mg/h</small></span><span class="d">cel ${fmt(r.naH*r.H)} mg · w planie ${fmt(r.totNa)} mg</span></div>
+  </div>`;
+
+  // tabela planu
+  let cum=0; const rows=[];
+  rows.push(`<tr class="ev-start"><td class="num">0:00</td><td class="num">${clockAt(r,0)}</td><td class="num">0</td><td><div class="items"><strong>Start</strong><span class="muted">${(()=>{ const m=Math.min(r.bN,r.mixB), w=r.bN-m; return [m?`${m}× bidon ${r.bV} ml: ${esc(drinkName)}`:'', w?`${w}× bidon ${r.bV} ml: woda`:''].filter(Boolean).join(', '); })()}. Pij po ${fluidSlot} ml co ${r.every} min, czyli łyk co 10–15 min.</span></div></td><td class="num">—</td><td></td></tr>`);
+  const perEvent=[];
+  r.events.forEach(e=>{
+    const tcum = r.drinkCarbTo(e.t);
+    if(e.type==='refill'){
+      rows.push(`<tr class="ev-refill"><td class="num">${hm(e.t)}</td><td class="num">${clockAt(r,e.t)}</td><td class="num">${fmt(e.km)}</td><td><div class="items"><strong style="color:var(--water)">Uzupełnij bidony</strong><span class="muted">${e.mix?`${e.mix}× ${r.bV} ml: ${esc(drinkName)} (porcje na bidon: ${fmt(r.dPor,r.dPor%1?1:0)})`:''}${e.mix&&e.water?', ':''}${e.water?`${e.water}× ${r.bV} ml: sama woda`:''}${r.elec.na?`. Do każdego: ${esc(r.elec.n)} × ${fmt(r.ePor,r.ePor%1?1:0)}`:''}</span></div></td><td class="num">—</td><td></td></tr>`);
+      perEvent.push(`${hm(e.t)}  km ${String(Math.round(e.km)).padStart(3)}  ▸ BIDONY: ${[e.mix?e.mix+'× napój':'',e.water?e.water+'× woda':''].filter(Boolean).join(' + ')}`);
+      return;
+    }
+    const c=e.items.reduce((a,p)=>a+p.c,0); cum+=c;
+    const totalSoFar = cum + tcum, goal = r.target*e.t/60;
+    const pct = goal>0? clamp(totalSoFar/goal*100,0,130):100;
+    const items = e.items.length ? e.items.map(p=>`<span class="it"><span class="tag t-${p.caf?'caf':p.t}">${p.caf?'kofeina':TLABEL[p.t]}</span>${esc(p.n)}<span class="muted">${p.c?p.c+' g':p.na+' mg Na'}</span></span>`).join('') : `<span class="muted">tylko napój</span>`;
+    const gr = e.ahead>0.05 ? `<span class="grade up">podjazd ${fmt(e.ahead*100)}%</span>` : e.grade<-0.03 ? `<span class="grade">zjazd</span>` : '';
+    rows.push(`<tr><td class="num">${hm(e.t)}</td><td class="num">${clockAt(r,e.t)}</td><td class="num">${fmt(e.km)}</td><td><div class="items">${items}<span class="muted">+ ${fluidSlot} ml ${sipWhat(r,e.t)}</span></div></td>
+      <td class="num">${c?c+' g':'—'}<div class="bar" title="realizacja celu węgli: ${fmt(pct)}%"><span style="width:${Math.min(100,pct)}%"></span></div></td><td>${gr}</td></tr>`);
+    if(e.items.length) perEvent.push(`${hm(e.t)}  km ${String(Math.round(e.km)).padStart(3)}  ${stickerItems(e.items)}`);
+  });
+  rows.push(`<tr class="ev-end"><td class="num">${hm(r.T)}</td><td class="num">${clockAt(r,r.T)}</td><td class="num">${fmt(r.sim.D)}</td><td><div class="items"><strong>Meta</strong><span class="muted">W ciągu 30–60 min zjedz posiłek regeneracyjny (niżej).</span></div></td><td class="num">${fmt(r.totC)} g</td><td></td></tr>`);
+
+  // lista do spakowania
+  const pack=[];
+  Object.keys(r.used).sort((a,b)=>r.used[b]-r.used[a]).forEach(id=>{ const p=PROD[id], n=r.used[id]; const a=avail[id]; const q=String(a?.q??'').trim();
+    pack.push(`<li><span class="cnt">${n}×</span><span><span class="tag t-${p.caf?'caf':p.t}">${TLABEL[p.t]}</span>${esc(p.n)}${q!==''?` <span class="muted">(masz ${q})</span>`:''}</span><span class="sm">${fmt(p.c*n)} g</span></li>`); });
+  // napój w bidonach: na początku listy, bo trzeba go przygotować przed wyjazdem
+  const drinkPack=[], pf=n=>fmt(n,n%1?1:0);
+  if(r.elec.na && r.ePor>0) drinkPack.push(`<li><span class="cnt">${pf(r.bottlesTot*r.ePor)}×</span><span><span class="tag t-elec">elektrolity</span>${esc(r.elec.n)} <span class="muted">(${pf(r.ePor)} na bidon)</span></span><span class="sm">${fmt(r.elec.na*r.ePor*r.bottlesTot)} mg Na</span></li>`);
+  const waterB = r.bottlesTot - r.carbBottles, reff=r.refills.length?` · ${r.refills.length}× uzupełnienie po drodze`:'';
+  if(r.carbBottles) drinkPack.push(`<li><span class="cnt">${r.carbBottles}×</span><span><span class="tag t-mix">bidon z napojem</span>${r.bV} ml: ${esc(r.drink.id==='diy'?'własna mieszanka':r.drink.n)}</span><span class="sm">${fmt(r.carbBottles*r.bV/1000,1)} l</span></li>`);
+  if(waterB) drinkPack.push(`<li><span class="cnt">${waterB}×</span><span><span class="tag t-drink">bidon z wodą</span>${r.bV} ml: sama woda${r.elec.na&&r.ePor>0?' + elektrolity':''}</span><span class="sm">${fmt(waterB*r.bV/1000,1)} l</span></li>`);
+  drinkPack.push(`<li class="packnote"><span></span><span class="muted">Na rowerze ${r.bN} ${r.bN===1?'bidon':'bidony'}${reff}. Najpierw pij napój, potem wodę. Razem ${fmt(r.fluidTot,1)} l.</span><span></span></li>`);
+  pack.unshift(...drinkPack);
+
+  const preC=Math.round(P.mass*2/5)*5, recC=Math.round(P.mass*1.1/5)*5, recP=Math.round(P.mass*0.3);
+  const rehyd = Math.max(0.5, r.lossKg*1.5);
+
+  const sticker = [`PALIWO · ${fmt(r.sim.D)} km · ${hm(r.T)} · cel ${r.target} g/h`, `Pij ${fluidSlot} ml co ${r.every} min`, '—'].concat(perEvent).join('\n');
+
+  TOWN_EL.remove(); // wybór miejscowości przenosimy między renderami, żeby nie tracić stanu
+  $('out').innerHTML = `
+    ${stats}
+    <div class="alerts">${alerts}</div>
+    <div class="card">
+      <div class="cardhead"><div><h2>Plan na trasę</h2><p class="sub">${r.events.filter(e=>e.type==='feed').length} punktów jedzenia co ${r.every} min · stałe jedzenie ${fmt(r.solidH)} g/h + napój średnio ${fmt(r.drinkCarbTo(r.T)/r.H)} g/h</p></div>
+      <button type="button" class="btn sm" id="copyPlan">Kopiuj plan jako tekst</button></div>
+      <div class="tablewrap"><table class="plan"><thead><tr><th>Czas</th><th>Godz.</th><th>km</th><th>Co zjeść i wypić</th><th>Węgle</th><th>Teren</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>
+    </div>
+    <div class="card">
+      <div class="cardhead"><div><h2>Profil trasy</h2><p class="sub">${GPX?'z pliku GPX':'profil szacunkowy z dystansu i przewyższeń'} · kropki to jedzenie, niebieskie linie to woda${GPX&&+TOWN_EL.querySelector('select').value?` · ${townsNear().length} miejscowości przy trasie`:''}</p></div><div id="townSlot"></div></div>
+      <div class="chartbox" id="profBox">${profileSVG(r)}<div class="tip" id="profTip" hidden></div></div>
+      <div class="chartkey">${['gel','chew','caf','bar','food','cap'].map(k=>`<span><i class="dot${MK[k].ring?' ring':''}" style="--c:${MK[k].c}"></i>${MK[k].n}</span>`).join('')}<span><i style="background:var(--water)"></i>uzupełnienie wody</span>${GPX?'<span><i style="background:var(--ink);height:6px;width:6px;border-radius:50%"></i>miejscowość</span>':''}</div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="cardhead"><div><h2>Spakuj</h2><p class="sub">${fmt(r.totC)} g węgli · ${fmt(r.solidK + r.drinkC*4)} kcal z jedzenia i napojów</p></div></div><ul class="pack">${pack.join('')}</ul></div>
+      <div class="card"><div class="cardhead"><div><h2>Bilans</h2><p class="sub">co zużyjesz i co uzupełnisz</p></div></div>
+        <dl class="kv">
+          <dt>Spalone węglowodany</dt><dd>${fmt(r.sim.cho)} g</dd>
+          <dt>Zjedzone i wypite węglowodany</dt><dd>${fmt(r.totC)} g (${fmt(r.totC/Math.max(1,r.sim.cho)*100)}%)</dd>
+          <dt>Spalone kalorie</dt><dd>${fmt(r.sim.kcal)} kcal</dd>
+          <dt>Spożyte kalorie (jedzenie + napoje)</dt><dd>${fmt(r.solidK + r.drinkC*4)} kcal</dd>
+          <dt>Pokryte energią z jedzenia</dt><dd>${fmt((r.solidK+r.drinkC*4)/r.sim.kcal*100)}% kcal</dd>
+          <dt>Utrata potu</dt><dd>${fmt(r.sweatTot,1)} l</dd>
+          <dt>Wypite płyny</dt><dd>${fmt(r.totIn,1)} l</dd>
+          <dt>Szacowany spadek masy</dt><dd>${fmt(r.lossKg,1)} kg (${fmt(r.lossPct,1)}%)</dd>
+          <dt>Sód: strata / w planie</dt><dd>${fmt(r.sweatTot*r.naConc)} / ${fmt(r.totNa)} mg</dd>
+          <dt>Kofeina</dt><dd>${fmt(r.cafTot)} mg${r.cafMax?` (limit ${fmt(r.cafMax)})`:''}</dd>
+        </dl></div>
+    </div>
+    <div class="grid2">
+      <div class="card prose"><div class="cardhead"><div><h2>Przed i po</h2></div></div>
+        <p><strong>3–4 h przed startem:</strong> około ${preC} g węglowodanów (2 g/kg), mało tłuszczu i błonnika. Na przykład owsianka z bananem i miodem, bułki z dżemem, ryż.</p>
+        <p><strong>2 h przed:</strong> 500 ml wody${P.temp>=25||r.naConc>=1300?' z elektrolitami (~500 mg sodu)':''}. 15 min przed: kilka łyków.</p>
+        ${r.cafMax>0?`<p><strong>Kofeina:</strong> plan daje ją od połowy trasy. Kawa przed startem liczy się do limitu ${fmt(r.cafMax)} mg.</p>`:''}
+        <p><strong>Po jeździe (30–60 min):</strong> ${recC} g węglowodanów i ${recP} g białka. Wypij ok. ${fmt(rehyd,1)} l płynów w ciągu kilku godzin, czyli 150% utraconej masy, najlepiej ze szczyptą soli.</p>
+      </div>
+      <div class="card"><div class="cardhead"><div><h2>Ściąga na mostek</h2><p class="sub">wydrukuj, wytnij i przyklej taśmą do mostka albo górnej rury</p></div>
+        <div class="stbtns"><button type="button" class="btn sm primary" id="pdfSticker">Pobierz PDF</button><button type="button" class="btn sm" id="copySticker">Kopiuj tekst</button></div></div>
+        <div class="stprev"><img id="stImg" alt="Podgląd ściągi na mostek: punkty jedzenia i picia z ikonami"></div>
+        <details class="stxt" open><summary>Wersja tekstowa</summary><div class="sticker" id="sticker">${esc(sticker)}</div></details></div>
+    </div>`;
+  r._sticker=sticker;
+  r._text = buildText(r, fluidSlot, drinkName);
+  $('copyPlan').onclick=()=>copy(r._text);
+  $('copySticker').onclick=()=>copy(r._sticker);
+  $('pdfSticker').onclick=()=>downloadSticker(r);
+  stickerPreview(r);
+  if(GPX) $('townSlot').appendChild(TOWN_EL);
+  bindProfileTip(r);
+
+  // nagłówki sekcji
+  $('h-route').textContent = `${fmt(r.sim.D)} km · ↑${fmt(num('gain'))} m`;
+  $('h-rider').textContent = `${fmt(P.mass)} kg · ${fmt(P.ftp)} W`;
+  $('h-bike').textContent = `${fmt(P.m,1)} kg · Crr ${P.crr.toFixed(4).replace('.',',')}`;
+  $('h-wx').textContent = `${fmt(P.temp)}°C · ${fmt(num('wind'))} km/h`;
+  $('h-eff').textContent = `${fmt(r.IF*100)}% FTP`;
+  $('spdInfo').textContent = `Wychodzi ${hm(r.T)} jazdy przy średniej mocy ${fmt(r.IF*100)}% FTP.`;
+  $('h-bottle').textContent = `${r.bN}× ${r.bV} ml`;
+}
+const STICK = {gel:'żel',chew:'żelki',bar:'baton',food:'jedzenie',cap:'sól'};
+// co jest w bidonie, z którego pijesz w danej chwili: najpierw napój, potem sama woda
+function sipWhat(r,t){
+  if(!r.mixB) return '<span class="sip w">wody</span>';
+  const h=t/60, h0=(t-r.every)/60;
+  if(h<=r.mixH) return '<span class="sip m">napoju</span>';
+  if(h0<r.mixH) return '<span class="sip m">napoju</span> → <span class="sip w">wody</span>';
+  return '<span class="sip w">wody</span>';
+}
+function stickerItems(items){
+  const c={}, order=[];
+  items.forEach(p=>{ const k=STICK[p.t]+(p.caf?' z kofeiną':''); if(!c[k]){c[k]=0;order.push(k);} c[k]++; });
+  return order.map(k=>(c[k]>1?c[k]+'× ':'')+k).join(' + ');
+}
+function buildText(r,fluidSlot,drinkName){
+  const L=[`PLAN ŻYWIENIA · ${fmt(r.sim.D,1)} km · ${hm(r.T)} jazdy (${hm(r.elapsed)} z postojami)`,
+    `Cel: ${r.target} g węgli/h · ${fmt(r.fluidH,2)} l płynów/h · ${fmt(r.naH)} mg sodu/h`,
+    `Bidony: ${r.bN}× ${r.bV} ml – ${drinkName}`,''];
+  L.push(`0:00 ${clockAt(r,0)}  km 0   START – pij ${fluidSlot} ml co ${r.every} min`);
+  r.events.forEach(e=>{
+    if(e.type==='refill') L.push(`${hm(e.t)} ${clockAt(r,e.t)}  km ${fmt(e.km)}  UZUPEŁNIJ BIDONY`);
+    else L.push(`${hm(e.t)} ${clockAt(r,e.t)}  km ${fmt(e.km)}  ${e.items.length?e.items.map(p=>p.n).join(' + '):'tylko napój'}`);
+  });
+  L.push(`${hm(r.T)} ${clockAt(r,r.T)}  km ${fmt(r.sim.D)}  META`,'','SPAKUJ:');
+  Object.keys(r.used).forEach(id=>L.push(`- ${r.used[id]}× ${PROD[id].n}`));
+  return L.join('\n');
+}
+function copy(text){
+  const ok=()=>toast('Skopiowano do schowka');
+  try{ navigator.clipboard.writeText(text).then(ok,()=>fallbackCopy(text)); }catch(e){ fallbackCopy(text); }
+}
+/* ---------- ściąga graficzna: rysunek na canvas, PNG i PDF ---------- */
+// kolory do druku, niezależne od motywu strony
+const SC = {
+  gel:{c:'#E08E00',bg:'#FFF3DC',n:'ŻEL'}, chew:{c:'#D2600F',bg:'#FDE9DA',n:'ŻELKI'},
+  caf:{c:'#6B3F1D',bg:'#F1E4D8',n:'ŻEL + KOFEINA'}, bar:{c:'#2B7A4B',bg:'#E1F2E7',n:'BATON'},
+  food:{c:'#3F9A3A',bg:'#E6F4E2',n:'JEDZENIE'}, cap:{c:'#6E45C4',bg:'#EEE7FB',n:'SÓL'},
+  water:{c:'#1288BF',bg:'#DFF1FA',n:'WODA'}
+};
+const stKind = p => p.caf ? 'caf' : (SC[p.t] ? p.t : 'food');
+function stIcon(g,k,x,y,r){
+  g.save(); g.fillStyle=SC[k].c; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill();
+  g.fillStyle='#fff'; g.strokeStyle='#fff'; g.lineWidth=r*0.12; g.lineCap='round'; g.lineJoin='round';
+  const u=r/10; g.translate(x,y);
+  const rr=(x0,y0,w,h,ra)=>{ g.beginPath(); if(g.roundRect) g.roundRect(x0,y0,w,h,ra); else g.rect(x0,y0,w,h); };
+  if(k==='gel'){ rr(-3.5*u,-4*u,7*u,9*u,1.5*u); g.fill(); g.fillRect(-1.2*u,-6.5*u,2.4*u,3*u); g.fillStyle=SC[k].c; g.fillRect(-2*u,1*u,4*u,0.9*u); }
+  else if(k==='chew'){ [[-4.5,-1],[0.5,-1],[-2,-5.5]].forEach(([a,b])=>{ rr(a*u,b*u,4*u,4*u,0.8*u); g.fill(); }); }
+  else if(k==='caf'){ rr(-4.5*u,-1.5*u,7*u,6*u,1.2*u); g.fill(); g.beginPath(); g.arc(3*u,1.5*u,1.8*u,-Math.PI/2,Math.PI/2); g.stroke();
+    g.beginPath(); g.moveTo(-2.5*u,-3*u); g.quadraticCurveTo(-1.5*u,-4.5*u,-2.5*u,-6*u); g.moveTo(0.5*u,-3*u); g.quadraticCurveTo(1.5*u,-4.5*u,0.5*u,-6*u); g.stroke(); }
+  else if(k==='bar'){ g.save(); g.rotate(-0.5); rr(-5.5*u,-2*u,11*u,4*u,0.8*u); g.fill(); g.fillStyle=SC[k].c; g.fillRect(-3.5*u,-2*u,0.7*u,4*u); g.fillRect(2.8*u,-2*u,0.7*u,4*u); g.restore(); }
+  else if(k==='food'){ g.beginPath(); g.arc(0,1*u,4.6*u,0,Math.PI*2); g.fill(); g.beginPath(); g.ellipse(2*u,-4.6*u,2.2*u,1.1*u,-0.6,0,Math.PI*2); g.fill(); g.beginPath(); g.moveTo(0,-3.2*u); g.lineTo(0.4*u,-5.8*u); g.stroke(); }
+  else if(k==='cap'){ rr(-3.2*u,-1.5*u,6.4*u,7*u,1*u); g.fill(); g.beginPath(); g.ellipse(0,-1.5*u,3.2*u,3.6*u,0,Math.PI,0); g.fill(); g.fillStyle=SC[k].c; [[-1.2,-3.2],[1.2,-3.2],[0,-4.4]].forEach(([a,b])=>{ g.beginPath(); g.arc(a*u,b*u,0.6*u,0,Math.PI*2); g.fill(); }); }
+  else if(k==='water'){ g.beginPath(); g.moveTo(0,-6*u); g.bezierCurveTo(3*u,-2*u,5*u,0,5*u,2.2*u); g.arc(0,2.2*u,5*u,0,Math.PI); g.bezierCurveTo(-5*u,0,-3*u,-2*u,0,-6*u); g.fill(); }
+  g.restore();
+}
+async function drawSticker(r,plain=false){ // plain: białe tło wierszy, kolor tylko w pasku, ikonie i napisie
+  try{ await Promise.all(['700 40px "Barlow Condensed"','600 30px "Barlow"','500 30px "IBM Plex Mono"'].map(f=>document.fonts.load(f))); }catch(e){}
+  const fluidSlot=Math.round(r.fluidH*r.every/60*1000/10)*10;
+  const rows=[];
+  r.events.forEach(e=>{
+    if(e.type==='refill') rows.push({e,kinds:['water'],label:'BIDONY', sub:[e.mix?`${e.mix}× napój`:'',e.water?`${e.water}× woda`:''].filter(Boolean).join(' + ')});
+    else if(e.items.length){
+      const cnt={}, order=[]; e.items.forEach(p=>{ const k=stKind(p); if(!cnt[k]){cnt[k]=0;order.push(k);} cnt[k]++; });
+      rows.push({e,kinds:order,cnt,key:order.join('+'),label:order.map(k=>(cnt[k]>1?cnt[k]+'× ':'')+SC[k].n).join(' + '), sub:''});
+    }
+  });
+  // kolejne takie same punkty w równych odstępach łączymy w jeden wiersz: „ŻEL co 30 min”
+  const grp=[];
+  rows.forEach(row=>{
+    const last=grp[grp.length-1];
+    // grupujemy po rodzaju produktu, a nie po liczbie sztuk: „ŻEL” i „2× ŻEL” trafiają do jednej grupy
+    if(last && !row.sub && !last.sub && row.key===last.key){
+      const step=row.e.t-last.end.e.t;
+      if(last.n===1 || Math.abs(step-last.step)<=1){ last.step=step; last.end=row; last.n++; row.kinds.forEach(k=>last.tot[k]+=row.cnt[k]); return; }
+    }
+    grp.push({...row, end:row, n:1, step:0, tot:{...(row.cnt||{})}});
+  });
+  // zwarty pasek na mostek / górną rurę: kolumny czas | km | ikony + napis
+  const W=480, S=3, HEAD=68, ROW=40, ROW2=58, H=HEAD+grp.reduce((a,x)=>a+(x.n>1?ROW2:ROW),0)+44;
+  const cv=document.createElement('canvas'); cv.width=W*S; cv.height=H*S;
+  const g=cv.getContext('2d'); g.scale(S,S);
+  const ink='#13202F', mute='#5B6779', DISP='"Barlow Condensed","Arial Narrow",sans-serif', BODY='"Barlow",Arial,sans-serif';
+  const X_T=12, X_KM=128, X_IC=150;
+  g.fillStyle='#fff'; g.fillRect(0,0,W,H);
+  g.fillStyle=ink; g.fillRect(0,0,W,6);
+  g.textBaseline='alphabetic';
+  g.font=`700 30px ${DISP}`; g.fillText(`${fmt(r.sim.D)} KM · ${hm(r.T)} · ${r.target} G/H`,X_T,38);
+  // nagłówki kolumn, tylko raz
+  g.fillStyle=mute; g.font=`700 14px ${BODY}`;
+  g.fillText('CZAS',X_T,62); g.textAlign='right'; g.fillText('KM',X_KM,62); g.textAlign='left';
+  let y=HEAD;
+  grp.forEach(row=>{
+    const multi=row.n>1, RH=multi?ROW2:ROW, col=SC[row.kinds[0]], mid=y+RH/2;
+    if(!plain){ g.fillStyle=col.bg; g.fillRect(4,y+1.5,W-8,RH-3); }
+    g.fillStyle=col.c; g.fillRect(4,y+1.5,5,RH-3);
+    if(multi){
+      // zakres: od – do, w dwóch liniach
+      g.fillStyle=ink; g.font=`700 26px ${DISP}`; g.fillText(hm(row.e.t),X_T+2,y+25); g.fillText('–'+hm(row.end.e.t),X_T+2,y+50);
+      g.textAlign='right'; g.font=`600 22px ${DISP}`; g.fillStyle=mute;
+      g.fillText(String(Math.round(row.e.km)),X_KM,y+25); g.fillText('–'+Math.round(row.end.e.km),X_KM,y+50); g.textAlign='left';
+    } else {
+      g.fillStyle=ink; g.font=`700 30px ${DISP}`; g.fillText(hm(row.e.t),X_T+2,mid+10);
+      g.textAlign='right'; g.font=`600 24px ${DISP}`; g.fillStyle=mute; g.fillText(String(Math.round(row.e.km)),X_KM,mid+9); g.textAlign='left';
+    }
+    let ix=X_IC+14; row.kinds.forEach(k=>{ stIcon(g,k,ix,mid,14); ix+=31; });
+    const txt=row.sub?`${row.label}: ${row.sub.toUpperCase()}`:row.label;
+    g.fillStyle=col.c; g.font=`700 ${txt.length>24?21:25}px ${DISP}`;
+    if(multi){
+      g.fillText(`${row.kinds.map(k=>SC[k].n).join(' + ')} CO ${Math.round(row.step)} MIN`, ix-10, mid-1);
+      const tot=row.kinds.length===1 ? `${row.tot[row.kinds[0]]}×` : row.kinds.map(k=>`${row.tot[k]}× ${SC[k].n.toLowerCase()}`).join(', ');
+      g.fillStyle=ink; g.font=`600 18px ${BODY}`; g.fillText(`razem ${tot}`, ix-10, mid+20);
+    } else g.fillText(txt, ix-10, mid+9);
+    y+=RH;
+  });
+  g.fillStyle=ink; g.font=`700 24px ${DISP}`; g.fillText(`${hm(r.T)}`,X_T+2,y+30);
+  g.textAlign='right'; g.fillStyle=mute; g.fillText(fmt(r.sim.D),X_KM,y+30); g.textAlign='left';
+  g.fillStyle=ink; g.fillText('META',X_IC,y+30);
+  return cv;
+}
+async function stickerPreview(r){ const cv=await drawSticker(r); const img=$('stImg'); if(img && lastR===r) img.src=cv.toDataURL('image/png'); }
+let jspdfP=null;
+function loadJsPDF(){
+  if(window.jspdf) return Promise.resolve(window.jspdf);
+  return jspdfP ||= new Promise((ok,fail)=>{ const sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; sc.onload=()=>ok(window.jspdf); sc.onerror=()=>{ jspdfP=null; fail(new Error('Nie udało się wczytać biblioteki PDF.')); }; document.head.appendChild(sc); });
+}
+async function saveFile(name, blob){
+  // claude.ai: przez uprawnienie „pobieranie”; własny hosting: zwykłe pobranie pliku
+  const dl = window.claude?.use ? await window.claude.use('downloads').catch(()=>null) : null;
+  if(dl){
+    try{ await dl.save({filename:name, data:blob}); toast('Zapisano: '+name); }
+    catch(e){ if(e?.code!=='declined') toast('Nie udało się zapisać pliku ('+(e?.code||'błąd')+')'); }
+    return;
+  }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+async function downloadSticker(r){
+  const name=`sciaga-${Math.round(r.sim.D)}km`;
+  try{
+    const cv=await drawSticker(r), cvP=await drawSticker(r,true);
+    toast('Przygotowuję PDF…');
+    const {jsPDF}=await loadJsPDF();
+    const doc=new jsPDF({unit:'mm',format:'a4'});
+    // pasek w rzeczywistym rozmiarze: 45 mm szerokości, węższy, jeśli inaczej nie zmieści się na stronie
+    let w=45, h=w*cv.height/cv.width; if(h>262){ h=262; w=h*cv.width/cv.height; }
+    const x=15, y0=20;
+    // strona 1: kolorowe tło wierszy; strona 2: białe tło (mniej tuszu)
+    [[cv,'sc'],[cvP,'sp']].forEach(([c,alias],i)=>{
+      if(i) doc.addPage();
+      doc.setFontSize(9); doc.setTextColor(90);
+      doc.text('Wytnij wzdluz przerywanej linii i przyklej przezroczysta tasma do mostka lub gornej rury.',15,12);
+      doc.addImage(c.toDataURL('image/jpeg',0.9),'JPEG',x,y0,w,h,alias,'FAST');
+      doc.setLineDashPattern([2,1.5],0); doc.setDrawColor(150); doc.rect(x-2,y0-2,w+4,h+4);
+    });
+    return saveFile(name+'.pdf', doc.output('blob'));
+  }catch(e){ console.error(e); toast(e.message||'Nie udało się przygotować pliku'); }
+}
+function fallbackCopy(text){
+  const el=$('sticker'); if(!el) return; const sel=window.getSelection(), rg=document.createRange(); rg.selectNodeContents(el); sel.removeAllRanges(); sel.addRange(rg);
+  toast('Zaznaczono tekst. Skopiuj go skrótem Ctrl+C');
+}
+let tt; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('show'),2200); }
+
+/* ---------- reakcje UI ---------- */
+function syncUI(){
+  const ip=num('int',65); $('intVal').textContent=ip+'%'; $('zone').textContent=zoneOf(ip);
+  const mT=$('modeT').checked, mS=$('modeS').checked; $('f-int').hidden=mT||mS; $('f-tt').hidden=!mT; $('f-spd').hidden=!mS;
+  $('f-crr').hidden = $('tyre').value!=='custom';
+  $('diy').hidden = $('drink').value!=='diy';
+  const isWater=$('drink').value==='water'; $('dPor').disabled=isWater; $('mixN').disabled=isWater;
+  $('ePor').disabled = $('elec').value==='none';
+  const tid=$('tyre').value; const P=crrEff();
+  $('crrInfo').textContent = (tid==='custom'?'':`Crr opony na rolce ≈ ${TYRE[tid].c.toFixed(4).replace('.',',')}. `)+`Po uwzględnieniu nawierzchni ≈ ${P.toFixed(4).replace('.',',')}. Wartości orientacyjne dla ciśnienia dobranego do wagi.`;
+  const sm=surfMix(), wideT=tid!=='custom'&&!/^szos/i.test(TYRE[tid].cat);
+  $('surf2').disabled = sm.p===0;
+  $('surfInfo').textContent = `Opór toczenia ×${fmt(wideT?sm.s1.mw:sm.s1.mr,2)}`+(sm.p>0?` / ×${fmt(wideT?sm.s2.mw:sm.s2.mr,2)}`:'')+` względem pomiaru na rolce (${wideT?'szeroka opona tłumi nierówności lepiej':'opona szosowa'}). Zjazdy do ${fmt(sm.s1.v*(1-sm.p)+sm.s2.v*sm.p)} km/h.`;
+  const dirOk = GPX || ['var','head','tail'].includes($('windDir').value);
+  $('wxInfo').textContent = dirOk ? 'Kierunek wiatru (N, E, S, W…) jest liczony odcinek po odcinku tylko dla wczytanego GPX.' : 'Bez GPX nie wiadomo, w którą stronę jedziesz, więc wiatr liczymy jako zmienny.';
+  diyInfo();
+}
+let rt, lastR=null;
+var TOWN_EL = document.getElementById('townTpl').content.firstElementChild.cloneNode(true);
+TOWN_EL.querySelector('select').addEventListener('change',()=>recalc());
+
+/* ---------- prognoza pogody (Open-Meteo) ---------- */
+const DIRS=['N','NE','E','SE','S','SW','W','NW'];
+async function getWeather(){
+  const st=$('wxStatus'), btn=$('wxGet'); st.classList.remove('err');
+  const say=(t,err)=>{ st.textContent=t; st.classList.toggle('err',!!err); };
+  btn.disabled=true; say('Pobieram prognozę…');
+  try{
+    let lat, lon, place;
+    const q=$('wxPlace').value.trim();
+    if(q){
+      const g=await (await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=pl&name='+encodeURIComponent(q))).json();
+      if(!g.results||!g.results.length) throw new Error('Nie znaleziono miejscowości „'+q+'”. Sprawdź pisownię.');
+      ({latitude:lat, longitude:lon}=g.results[0]); place=g.results[0].name;
+    } else if(GPX){ lat=GPX.start.lat; lon=GPX.start.lon; place='start trasy z GPX'; }
+    else throw new Error('Wpisz miejscowość albo wczytaj ślad GPX.');
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&wind_speed_unit=kmh&timezone=auto&forecast_days=2`;
+    const w=await (await fetch(url)).json();
+    const h=w.hourly; if(!h||!h.time) throw new Error('Serwis pogody zwrócił pustą odpowiedź.');
+    const day=+$('wxDay').value, startH=parseInt(($('start').value||'08:00').split(':')[0],10)||0;
+    const dur=Math.max(1,Math.ceil((lastR?lastR.elapsed:240)/60));
+    const i0=Math.min(h.time.length-1, day*24+startH), i1=Math.min(h.time.length-1, i0+dur);
+    let t=[],rh=[],ws=0,u=0,v=0,n=0;
+    for(let i=i0;i<=i1;i++){ t.push(h.temperature_2m[i]); rh.push(h.relative_humidity_2m[i]); const sp=h.wind_speed_10m[i], d=rad(h.wind_direction_10m[i]); ws+=sp; u+=sp*Math.sin(d); v+=sp*Math.cos(d); n++; }
+    const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+    const T=avg(t), RH=avg(rh), WS=ws/n, dir=((Math.round(((Math.atan2(u,v)*180/Math.PI)+360)%360/45))%8)*45;
+    $('temp').value=Math.round(T); $('rh').value=Math.round(RH/5)*5; $('wind').value=Math.round(WS);
+    $('windDir').value = WS<3 ? 'var' : String(dir);
+    const hh=x=>String(x%24).padStart(2,'0')+':00';
+    say(`Open-Meteo, ${place}, ${day?'jutro':'dziś'} ${hh(startH)}–${hh(startH+dur)}: ${fmt(Math.min(...t))}–${fmt(Math.max(...t))}°C (średnio ${fmt(T)}°C), wilgotność ${fmt(RH)}%, wiatr ${fmt(WS)} km/h z ${DIRS[dir/45]}.`);
+    recalc();
+  }catch(e){
+    const blocked = e instanceof TypeError;
+    say(blocked ? 'Nie udało się połączyć z serwisem pogody. Podgląd na claude.ai blokuje połączenia z zewnętrznymi serwisami. Na stronie opublikowanej na własnym hostingu przycisk działa. Tutaj wpisz pogodę ręcznie.' : e.message, true);
+  }finally{ btn.disabled=false; }
+}
+function recalc(){
+  clearTimeout(rt);
+  rt=setTimeout(()=>{
+    syncUI();
+    try{ const r=compute(); lastR=r; render(r); }
+    catch(e){ console.error(e); $('out').innerHTML=`<div class="alert crit"><b class="pill">błąd</b><span>Nie udało się policzyć planu: ${esc(e.message)}. Sprawdź wpisane wartości.</span></div>`; }
+    saveForm();
+  },60);
+}
+
+function init(){
+  buildProducts(); fillSelects(); loadForm(); fillSelects(); renderChips(); renderProducts();
+  $('form').addEventListener('input',e=>{
+    if(e.target.dataset.qid){ const id=e.target.dataset.qid; if(e.target.value!=='' && +e.target.value<0) e.target.value=''; avail[id]=avail[id]||{on:true,q:''}; avail[id].q=e.target.value; if(e.target.value!=='' && !avail[id].on){ avail[id].on=true; renderProducts(); $('pq-'+id)?.focus(); } }
+    recalc();
+  });
+  $('plist').addEventListener('keydown',e=>{
+    const q=e.target.dataset?.qid; if(!q || e.key!=='ArrowDown' || !(e.target.value==='0')) return;
+    e.preventDefault(); e.target.value=''; e.target.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  $('form').addEventListener('change',e=>{
+    if(e.target.dataset.pid){ const id=e.target.dataset.pid; avail[id]=avail[id]||{on:false,q:''}; avail[id].on=e.target.checked; e.target.closest('.prow').classList.toggle('off',!e.target.checked); const on=Object.keys(avail).filter(k=>avail[k].on&&PROD[k]).length; $('h-prod').textContent=on+' zaznaczonych'; }
+    if(e.target.id==='gpx' && e.target.files[0]) loadGPXFile(e.target.files[0]);
+    recalc();
+  });
+  $('chips').addEventListener('click',e=>{ const b=e.target.closest('[data-f]'); if(!b) return; filter=b.dataset.f; renderChips(); renderProducts(); });
+  $('plist').addEventListener('click',e=>{ const d=e.target.closest('[data-del]'); if(!d) return; e.preventDefault(); custom=custom.filter(p=>p.id!==d.dataset.del); delete avail[d.dataset.del]; buildProducts(); fillSelects(); renderProducts(); recalc(); toast('Usunięto produkt'); });
+  $('nAdd').addEventListener('click',()=>{
+    const n=$('nName').value.trim(), t=$('nType').value, c=num('nC'), na=num('nNa'), caf=num('nCaf');
+    if(!n){ toast('Wpisz nazwę produktu'); $('nName').focus(); return; }
+    if(t!=='cap' && t!=='elec' && c<=0){ toast('Podaj gramy węglowodanów'); $('nC').focus(); return; }
+    const id='c-'+Date.now().toString(36);
+    const k=$('nK').value.trim()!==''?num('nK'):Math.round(c*4);
+    custom.push({id,n,t,c,k,na,caf,r:$('nR').value,f:0});
+    if(t!=='drink' && t!=='elec') avail[id]={on:true,q:''};
+    buildProducts(); fillSelects();
+    if(t==='drink') $('drink').value=id; if(t==='elec') $('elec').value=id;
+    ['nName','nC','nNa','nK','nCaf'].forEach(k=>$(k).value='');
+    renderProducts(); recalc(); toast('Dodano: '+n);
+  });
+  $('gpxClear').addEventListener('click',clearGPX);
+  $('wxGet').addEventListener('click',getWeather);
+  const drop=$('drop');
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+  drop.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) loadGPXFile(f); });
+  recalc();
+}
+/* ---------- przełącznik jasny / ciemny ---------- */
+function initTheme(){
+  const root=document.documentElement, btn=$('themeBtn');
+  const isDark=()=> root.dataset.theme ? root.dataset.theme==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const show=()=>{ const d=isDark(); btn.setAttribute('aria-checked',d); $('themeLbl').textContent=d?'Ciemny':'Jasny'; };
+  const saved=store.get('pnt-theme'); if(saved==='dark'||saved==='light') root.dataset.theme=saved;
+  btn.addEventListener('click',()=>{ const t=isDark()?'light':'dark'; root.dataset.theme=t; store.set('pnt-theme',t); show(); });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',show);
+  show();
+}
+initTheme();
+loadTowns();
+Promise.all([loadProducts(),loadTyres()]).then(()=>{ init(); READY=true; }).catch(e=>{
+  console.error(e);
+  $('out').innerHTML=`<div class="alert crit"><b class="pill">błąd</b><span>Nie udało się wczytać listy produktów lub opon (${esc(e.message)}). Pliki produkty.csv i opony.csv muszą leżeć obok index.html, a strona musi być otwarta przez serwer (http/https), nie bezpośrednio z dysku.</span></div>`;
+});
+</script>
+
+</body>
+</html>

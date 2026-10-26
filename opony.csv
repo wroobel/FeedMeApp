@@ -1,0 +1,67 @@
+﻿kategoria;id;nazwa;crr
+Szosa;gp5000str;Continental Grand Prix 5000 S TR, 28 mm, bezdętkowo;0.0029
+Szosa;gp5000;Continental Grand Prix 5000, 28 mm, dętka butyl;0.0034
+Szosa;corsapro;Vittoria Corsa Pro, 28 mm;0.0026
+Szosa;corsanext;Vittoria Corsa N.EXT, 28 mm;0.0033
+Szosa;pzero;Pirelli P Zero Race TLR, 28 mm;0.0030
+Szosa;proone;Schwalbe Pro One TLE, 28 mm;0.0031
+Szosa;powercup;Michelin Power Cup TLR, 28 mm;0.0031
+Szosa;turbo;Specialized S-Works Turbo, 28 mm;0.0029
+Szosa;gp4s;Continental Grand Prix 4 Season, 28 mm;0.0042
+Szosa;durano;Schwalbe Durano Plus, 28 mm;0.0050
+Szosa;budget;Budżetowa szosowa z dętką;0.0046
+Gravel;gonrs;Schwalbe G-One RS, 40 mm;0.0037
+Gravel;terraspeed;Continental Terra Speed, 40 mm;0.0040
+Gravel;gravelking;Panaracer GravelKing SK, 40 mm;0.0044
+Gravel;cinturato;Pirelli Cinturato Gravel H, 40 mm;0.0045
+Gravel;terreno;Vittoria Terreno Dry, 38 mm;0.0046
+Gravel;terratrail;Continental Terra Trail, 40 mm;0.0047
+Gravel;gonebite;Schwalbe G-One Bite, 40 mm;0.0048
+Gravel;riddler;WTB Riddler, 45 mm;0.0050
+Gravel;terrahard;Continental Terra Hardpack, 40 mm;0.0043
+Gravel;goner;Schwalbe G-One R, 40 mm;0.0039
+Gravel;goneallround;Schwalbe G-One Allround, 40 mm;0.0046
+Gravel;goneoverland;Schwalbe G-One Overland, 45 mm;0.0047
+Gravel;goneultrabite;Schwalbe G-One Ultrabite, 40 mm;0.0052
+Gravel;cintrc;Pirelli Cinturato Gravel RC, 40 mm;0.0040
+Gravel;cintm;Pirelli Cinturato Gravel M, 40 mm;0.0047
+Gravel;cints;Pirelli Cinturato Gravel S, 40 mm;0.0052
+Gravel;terrenozero;Vittoria Terreno Zero, 38 mm;0.0042
+Gravel;terrenomix;Vittoria Terreno Mix, 38 mm;0.0047
+Gravel;terrenowet;Vittoria Terreno Wet, 38 mm;0.0055
+Gravel;gkss;Panaracer GravelKing SS, 40 mm;0.0041
+Gravel;gkplus;Panaracer GravelKing Slick Plus, 38 mm;0.0040
+Gravel;powergravel;Michelin Power Gravel, 40 mm;0.0044
+Gravel;pathpro;Specialized Pathfinder Pro, 42 mm;0.0040
+Gravel;tracer;Specialized Tracer Pro, 42 mm;0.0048
+Gravel;rhombus;Specialized Rhombus Pro, 42 mm;0.0050
+Gravel;reaver;Maxxis Reaver, 40 mm;0.0042
+Gravel;rambler;Maxxis Rambler, 40 mm;0.0048
+Gravel;receptor;Maxxis Receptor, 40 mm;0.0043
+Gravel;byway;WTB Byway, 40 mm;0.0043
+Gravel;vulpine;WTB Vulpine, 40 mm;0.0047
+Gravel;raddler;WTB Raddler, 40 mm;0.0047
+Gravel;resolute;WTB Resolute, 42 mm;0.0052
+Gravel;boken;IRC Boken, 40 mm;0.0045
+Gravel;rutland;Teravail Rutland, 42 mm;0.0046
+Gravel;cannonball;Teravail Cannonball, 40 mm;0.0043
+Gravel;snoqualmie;Rene Herse Snoqualmie Pass EL, 44 mm;0.0034
+Gravel;barlow;Rene Herse Barlow Pass EL, 38 mm;0.0034
+Gravel;touareg;Hutchinson Touareg, 40 mm;0.0049
+Gravel;overide;Hutchinson Overide, 38 mm;0.0045
+Gravel;connector;Goodyear Connector Ultimate, 40 mm;0.0042
+Gravel;getaway;Challenge Getaway Pro, 40 mm;0.0042
+Gravel;xplor;Donnelly X’Plor MSO, 40 mm;0.0047
+Gravel;thundero;Tufo Thundero, 40 mm;0.0050
+Gravel;gr1;Bontrager GR1 Team Issue, 40 mm;0.0046
+Trekking i MTB;marathon;Schwalbe Marathon Plus, 35 mm (trekking);0.0068
+Trekking i MTB;dub50;Continental Dubnital Rapid Race, 50 mm (gravel);0.0047
+Trekking i MTB;dubrr22;"Continental Dubnital Rapid Race, 2,2""";0.0050
+Trekking i MTB;dubrr24;"Continental Dubnital Rapid Race, 2,4""";0.0052
+Trekking i MTB;dubgr24;"Continental Dubnital Grip Race, 2,4""";0.0058
+Trekking i MTB;dubgt22;"Continental Dubnital Grip Trail, 2,2""";0.0064
+Trekking i MTB;dubgt24;"Continental Dubnital Grip Trail, 2,4""";0.0068
+Trekking i MTB;racingray;"Schwalbe Racing Ray / Ralph, 2,25""";0.0052
+Trekking i MTB;raceking;"Continental Race King, 2,2""";0.0055
+Trekking i MTB;ikon;"Maxxis Ikon, 2,2""";0.0060
+Trekking i MTB;dhf;"Maxxis Minion DHF, 2,5"" (enduro)";0.0095

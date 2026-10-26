@@ -40,7 +40,7 @@ Pliki CSV używają średnika jako separatora i otwierają się bezpośrednio w 
 
 Strona wczytuje pliki CSV przez `fetch`, więc musi być serwowana przez HTTP(S). Otwarcie `index.html` podwójnym kliknięciem z dysku nie zadziała.
 
-- **GitHub Pages:** Settings → Pages → Source: *Deploy from a branch*, gałąź `main`, folder `/ (root)`. Strona będzie pod adresem `https://<użytkownik>.github.io/<repozytorium>/`.
+- **GitHub Pages:** Settings → Pages → Source: *Deploy from a branch*, gałąź `main`, folder `/ (root)`. Strona będzie pod adresem `https://wroobel.github.io/FeedMeApp/`.
 - **Lokalnie:** `python3 -m http.server` w tym folderze, potem http://localhost:8000.
 
 Przycisk „Pobierz prognozę” korzysta z darmowego API Open-Meteo i działa na zwykłym hostingu.

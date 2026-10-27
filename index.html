@@ -61,12 +61,20 @@ button,input,select{font:inherit;color:inherit}
 .brand h1 span{color:var(--accent)}
 .brand p{margin:6px 0 0;color:var(--muted);max-width:60ch}
 .topside{display:flex;flex-direction:column;align-items:flex-end;gap:14px;margin-left:auto}
+.topbtns{display:flex;gap:8px;align-items:center}
+.reset{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:13px;color:var(--ink)}
+.reset:hover{border-color:var(--crit);color:var(--crit)}
+.reset.armed{background:var(--crit);border-color:var(--crit);color:var(--panel)}
+.empty{background:var(--panel);border:1px dashed var(--line);border-radius:var(--r);padding:28px 22px;display:flex;flex-direction:column;gap:8px}
+.empty h2{font-size:24px;text-transform:uppercase}
+.empty p{margin:0;color:var(--muted);max-width:60ch}
+.empty ul{margin:4px 0 0;padding-left:18px}
 .theme{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:5px 12px 5px 6px;cursor:pointer;font-weight:600;font-size:13px}
 .theme:hover{border-color:var(--accent)}
 .theme .knob{width:34px;height:20px;border-radius:99px;background:var(--sunk);border:1px solid var(--line);position:relative;flex:none}
 .theme .knob::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--accent);transition:transform .2s}
 .theme[aria-checked="true"] .knob::after{transform:translateX(14px)}
-@media (max-width:600px){.topside{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px))}.topside .legend{display:none}.top{position:relative}.brand{padding-right:110px}}
+@media (max-width:600px){.topbtns{flex-direction:column;align-items:flex-end}.topside{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px))}.topside .legend{display:none}.top{position:relative}.brand{padding-right:110px}}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
 
@@ -257,7 +265,10 @@ table.plan .muted{color:var(--muted);font-size:13px}
       <p>Wpisz trasę, siebie, rower i pogodę. Kalkulator policzy wydatek energii, potrzebne węglowodany, płyny i sód, a potem rozpisze produkty, które masz, na godziny i kilometry.</p>
     </div>
     <div class="topside">
+    <div class="topbtns">
+    <button type="button" class="reset" id="resetBtn" aria-live="polite"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span id="resetLbl">Wyczyść</span></button>
     <button type="button" class="theme" id="themeBtn" role="switch" aria-checked="false" aria-label="Tryb ciemny"><span class="knob"></span><span id="themeLbl">Jasny</span></button>
+    </div>
     <div class="legend" aria-hidden="true">
       <span><i style="background:var(--carb)"></i>węglowodany</span>
       <span><i style="background:var(--water)"></i>płyny</span>
@@ -1420,6 +1431,38 @@ function syncUI(){
   diyInfo();
 }
 let rt, lastR=null;
+// bez tych wartości nie da się policzyć planu
+function missingInputs(){
+  const m=[];
+  if(!GPX && !(num('dist')>0)) m.push('dystans trasy albo ślad GPX');
+  if(!(num('mass')>0)) m.push('masę ciała');
+  if(!(num('ftp')>0)) m.push('FTP');
+  if($('modeT').checked && !(parseTime($('ttime').value)>=10)) m.push('docelowy czas jazdy');
+  if($('modeS').checked && !(num('tspeed')>0)) m.push('docelową prędkość');
+  return m;
+}
+/* przycisk „Wyczyść”: liczby na zero, wszystko odznaczone; drugie kliknięcie potwierdza */
+let resetTimer=null;
+function resetAll(){
+  const btn=$('resetBtn');
+  if(!btn.classList.contains('armed')){
+    btn.classList.add('armed'); $('resetLbl').textContent='Na pewno? Kliknij';
+    clearTimeout(resetTimer); resetTimer=setTimeout(()=>{ btn.classList.remove('armed'); $('resetLbl').textContent='Wyczyść'; },4000);
+    return;
+  }
+  clearTimeout(resetTimer); btn.classList.remove('armed'); $('resetLbl').textContent='Wyczyść';
+  if(GPX) clearGPX();
+  document.querySelectorAll('#form input, .townpick select').forEach(el=>{
+    if(el.type==='checkbox') el.checked=false;
+    else if(el.type==='radio') el.checked=el.defaultChecked;
+    else if(el.type==='number'){ el.value = (el.id==='carbOv' || el.dataset.qid) ? '' : '0'; } // cel węgli pusty = auto, ilości produktów puste
+    else if(el.type==='range') el.value=el.defaultValue;
+    else if(el.type!=='file') el.value='';
+  });
+  document.querySelectorAll('#form select').forEach(el=>{ const d=[...el.options].find(o=>o.defaultSelected); el.value = d ? d.value : el.options[0]?.value; });
+  Object.keys(avail).forEach(k=>delete avail[k]);
+  renderProducts(); recalc(); toast('Wyczyszczono wszystkie ustawienia');
+}
 var TOWN_EL = document.getElementById('townTpl').content.firstElementChild.cloneNode(true);
 TOWN_EL.querySelector('select').addEventListener('change',()=>recalc());
 
@@ -1462,7 +1505,11 @@ function recalc(){
   clearTimeout(rt);
   rt=setTimeout(()=>{
     syncUI();
-    try{ const r=compute(); lastR=r; render(r); }
+    try{
+      const miss=missingInputs();
+      if(miss.length){ lastR=null; TOWN_EL.remove(); $('out').innerHTML=`<div class="empty"><h2>Uzupełnij dane</h2><p>Plan pojawi się, gdy wpiszesz:</p><ul>${miss.map(m=>`<li>${m}</li>`).join('')}</ul><p>Zaznacz też produkty, które zabierasz, żeby plan mógł je rozpisać.</p></div>`; }
+      else { const r=compute(); lastR=r; render(r); }
+    }
     catch(e){ console.error(e); $('out').innerHTML=`<div class="alert crit"><b class="pill">błąd</b><span>Nie udało się policzyć planu: ${esc(e.message)}. Sprawdź wpisane wartości.</span></div>`; }
     saveForm();
   },60);
@@ -1499,6 +1546,7 @@ function init(){
     renderProducts(); recalc(); toast('Dodano: '+n);
   });
   $('gpxClear').addEventListener('click',clearGPX);
+  $('resetBtn').addEventListener('click',resetAll);
   $('wxGet').addEventListener('click',getWeather);
   const drop=$('drop');
   ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));

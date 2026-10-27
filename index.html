@@ -1443,6 +1443,8 @@ function missingInputs(){
 }
 /* przycisk „Wyczyść”: liczby na zero, wszystko odznaczone; drugie kliknięcie potwierdza */
 let resetTimer=null;
+// pogoda po wyczyszczeniu: umiarkowane warunki zamiast zer (20°C, lekki wiatr)
+const RESET_VALS = {temp:'20', rh:'50', wind:'10'};
 function resetAll(){
   const btn=$('resetBtn');
   if(!btn.classList.contains('armed')){
@@ -1455,7 +1457,7 @@ function resetAll(){
   document.querySelectorAll('#form input, .townpick select').forEach(el=>{
     if(el.type==='checkbox') el.checked=false;
     else if(el.type==='radio') el.checked=el.defaultChecked;
-    else if(el.type==='number'){ el.value = (el.id==='carbOv' || el.dataset.qid) ? '' : '0'; } // cel węgli pusty = auto, ilości produktów puste
+    else if(el.type==='number'){ el.value = RESET_VALS[el.id] ?? ((el.id==='carbOv' || el.dataset.qid) ? '' : '0'); } // cel węgli pusty = auto, ilości produktów puste
     else if(el.type==='range') el.value=el.defaultValue;
     else if(el.type!=='file') el.value='';
   });

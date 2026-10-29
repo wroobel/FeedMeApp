@@ -426,7 +426,7 @@ table.plan .muted{color:var(--muted);font-size:13px}
     <summary><h2>Bidony</h2><span class="hint" id="h-bottle"></span></summary>
     <div class="fields">
       <label class="f"><span>Liczba bidonów</span><select id="bN">
-        <option>1</option><option selected>2</option><option>3</option><option>4</option>
+        <option>0</option><option>1</option><option selected>2</option><option>3</option><option>4</option>
       </select></label>
       <label class="f"><span>Pojemność</span><select id="bV">
         <option value="500">500 ml</option>
@@ -434,6 +434,7 @@ table.plan .muted{color:var(--muted);font-size:13px}
         <option value="750" selected>750 ml</option>
         <option value="950">950 ml</option>
       </select></label>
+      <label class="f full"><span>Bukłak (woda na plecach)</span><div class="unit"><input type="number" id="bladder" min="0" max="6" step="0.25" value="0"><b>l</b></div><small>0 to bez bukłaka. Plan liczy go jako samą wodę, pitą po bidonach.</small></label>
       <label class="f full"><span>Napój w bidonach</span><select id="drink"></select></label>
       <label class="f"><span>Porcji na bidon</span><input type="number" id="dPor" min="0" max="4" step="0.5" value="1"></label>
       <label class="f"><span>Bidonów z napojem</span><input type="number" id="mixN" min="0" max="30" step="1" value="2" placeholder="∞"><small>na całą trasę, reszta to sama woda</small></label>
@@ -639,7 +640,7 @@ function renderProducts(){
 }
 
 /* ---------- stan formularza ---------- */
-const FIELDS = ['dist','gain','climbGrade','alt','surf1','surf2','surf2Pct','start','stops','mass','ftp','gut','gly','caf','bike','gear','pos','draft','tyre','crr','temp','rh','wind','windDir','wxPlace','wxDay','townMin','int','ttime','tspeed','every','first','carbOv','bN','bV','drink','dPor','mixN','dMal','dFru','dSuc','dSal','elec','ePor'];
+const FIELDS = ['dist','gain','climbGrade','alt','surf1','surf2','surf2Pct','start','stops','mass','ftp','gut','gly','caf','bike','gear','pos','draft','tyre','crr','temp','rh','wind','windDir','wxPlace','wxDay','townMin','int','ttime','tspeed','every','first','carbOv','bN','bV','bladder','drink','dPor','mixN','dMal','dFru','dSuc','dSal','elec','ePor'];
 function saveForm(){
   const s = {}; FIELDS.forEach(k=>s[k]=$(k).value);
   s.mode = $('modeT').checked?'t':$('modeS').checked?'s':'i'; s.solidEarly = $('solidEarly').checked; s.forceFood = $('forceFood').checked;
@@ -874,16 +875,26 @@ function compute(){
   const ePor = Math.max(0,num('ePor',1));
   const carbsPerCarbBottle = drink.c*dPor;
   const naPerBottleE = elec.na*ePor;
-  // ograniczona liczba bidonów z mieszanką: pijemy je najpierw, potem już sama woda
-  const fluidTot=fluidH*H, bottlesTot=Math.max(bN,Math.ceil(fluidTot/(bV/1000)-0.05));
+  // kolejka pojemników: w każdym napełnieniu najpierw bidony (te z napojem pierwsze), potem bukłak;
+  // na punkcie wody uzupełniamy wszystko. Bidonów z napojem jest ograniczona liczba na całą trasę.
+  const fluidTot=fluidH*H, bladL=Math.max(0,num('bladder',0)), bL=bV/1000, capL=bN*bL+bladL;
   const mixRaw=String($('mixN').value).trim();
-  const mixB = drink.id==='water' ? 0 : Math.min(bottlesTot, mixRaw===''?Infinity:Math.max(0,Math.floor(+mixRaw)||0));
-  const share = mixB>0?1:0;
-  const carbPerL = carbsPerCarbBottle/(bV/1000), mixNaPerL = drink.na*dPor/(bV/1000), elecNaPerL = naPerBottleE/(bV/1000);
-  const mixH = mixB*bV/1000/fluidH;
-  const drinkCarbTo = tm => mixB ? fluidH*carbPerL*Math.min(tm/60,mixH) : 0;
-  const drinkNaTo = tm => fluidH*(elecNaPerL*tm/60 + (mixB?mixNaPerL*Math.min(tm/60,mixH):0));
+  let mixLeft = drink.id==='water' ? 0 : (mixRaw===''?Infinity:Math.max(0,Math.floor(+mixRaw)||0));
+  const cont=[]; let filled=0;
+  for(let cyc=0; capL>0 && cyc<200 && (cyc===0 || filled<fluidTot-0.02); cyc++){
+    for(let j=0;j<bN;j++){ if(cyc && filled>=fluidTot-0.02) break; const m=mixLeft>0; if(m) mixLeft--; cont.push({kind:m?'mix':'water',a:filled,b:filled+bL,cyc}); filled+=bL; }
+    if(bladL>0 && (cyc===0 || filled<fluidTot-0.02)){ cont.push({kind:'blad',a:filled,b:filled+bladL,cyc}); filled+=bladL; }
+  }
+  const mixB=cont.filter(c=>c.kind==='mix').length, share=mixB>0?1:0;
+  const bottlesTot=cont.filter(c=>c.kind!=='blad').length, bladFills=cont.filter(c=>c.kind==='blad').length;
+  const carbPerL = carbsPerCarbBottle/bL, mixNaPerL = drink.na*dPor/bL, elecNaPerL = naPerBottleE/bL;
+  const drunk = tm => fluidH*tm/60, over = (c,Ld) => Math.max(0,Math.min(Ld,c.b)-c.a);
+  const drinkCarbTo = tm => { const Ld=drunk(tm); return cont.reduce((a,c)=>a+(c.kind==='mix'?over(c,Ld)*carbPerL:0),0); };
+  const drinkNaTo = tm => { const Ld=drunk(tm); return cont.reduce((a,c)=>a+(c.kind==='blad'?0:over(c,Ld)*(elecNaPerL+(c.kind==='mix'?mixNaPerL:0))),0); };
+  const kindAt = tm => { const Ld=drunk(tm); const c=cont.find(c=>Ld>=c.a&&Ld<c.b)||cont[cont.length-1]; return c?c.kind:'water'; };
+  const mixEndMin = mixB ? Math.max(...cont.filter(c=>c.kind==='mix').map(c=>c.b))/fluidH*60 : 0;
   const drinkCarbH = mixB ? fluidH*carbPerL : 0; // podczas picia mieszanki
+  if(capL<=0) alerts.push(['crit','Nie masz czym wieźć picia. Ustaw liczbę bidonów albo pojemność bukłaka.']);
   const conc = carbsPerCarbBottle/(bV/1000);
   const hiCarbDrink=['maurten160','maurten320','sisbf','nd90d'].includes(drink.id); // napoje projektowane na wysokie stężenie
   if(share>0 && (conc>(hiCarbDrink?200:100))) alerts.push(['warn',`Stężenie napoju to ${fmt(conc)} g/l. Powyżej ~90 g/l napój wolniej opuszcza żołądek. Rozważ większy bidon albo mniej proszku.`]);
@@ -894,7 +905,7 @@ function compute(){
   const segAt = tm => { const s=tm*60; let lo=0,hi=segs.length-1; while(lo<hi){ const m=(lo+hi)>>1; if(segs[m].t1<s) lo=m+1; else hi=m; } return segs[lo]; };
   // napój z węglami pijemy tylko z pierwszych bidonów, więc ocena dotyczy tego odcinka jazdy
   if(mixB && drinkCarbH>target+5 && ov==null && target>0){
-    const mixMin=Math.min(T,mixH*60), avgH=drinkCarbTo(T)/H, over=drinkCarbH>gut;
+    const mixMin=Math.min(T,mixEndMin), avgH=drinkCarbTo(T)/H, over=drinkCarbH>gut;
     alerts.push([over?'crit':'warn',`Przez pierwsze ${hm(mixMin)} jazdy (do ok. km ${fmt(kmAt(mixMin))}) pijesz ${mixB} ${mixB===1?'bidon':mixB<5?'bidony':'bidonów'} z napojem i sam napój daje wtedy ok. ${fmt(drinkCarbH)} g węgli/h. To więcej niż cel ${target} g/h${over?` i więcej niż Twoja tolerancja ${gut} g/h, co grozi problemami żołądkowymi`:''}. W tym czasie plan nie daje innego jedzenia. Zmniejsz liczbę porcji na bidon albo rozłóż tę samą ilość proszku na więcej bidonów.`]);
   }
   const gradeAhead = tm => { let mx=-1; for(let k=0;k<=4;k++){ const s=segAt(Math.min(T,tm+k)); if(s) mx=Math.max(mx,s.g); } return mx; };
@@ -958,9 +969,12 @@ function compute(){
   if(debt>15 && slots.length) shortG=Math.max(shortG,debt);
 
   /* bidony: kiedy puste */
-  const carried=bN*bV/1000;
-  const refills=[]; for(let k=1; carried*k<fluidTot-0.05; k++){ const t=carried*k/fluidH*60; if(t<T) refills.push(t); }
-  refills.forEach((t,j)=>{ const mix=Math.min(bN,Math.max(0,mixB-(j+1)*bN)); events.push({t, km:kmAt(t), type:'refill', mix, water:bN-mix}); });
+  const refills=[];
+  for(let cyc=1; cont.some(c=>c.cyc===cyc); cyc++){
+    const cc=cont.filter(c=>c.cyc===cyc), t=cc[0].a/fluidH*60; if(t>=T) break;
+    refills.push(t);
+    events.push({t, km:kmAt(t), type:'refill', mix:cc.filter(c=>c.kind==='mix').length, water:cc.filter(c=>c.kind==='water').length, blad:cc.some(c=>c.kind==='blad')?bladL:0});
+  }
   events.sort((a,b)=>a.t-b.t);
   const carbBottles = mixB;
 
@@ -972,7 +986,7 @@ function compute(){
   let G=G0, Gn=G0, pool=0, gMin=G0, gMinT=0, lowT=null; const gc=[[0,100,100]];
   for(let mi=1; mi<=Math.ceil(T); mi++){
     const s=segAt(Math.min(T,mi-0.5)); const use = s? s.metW*60/4184*s.frac/4 : 0;
-    const dr = (mi/60<=mixH ? drinkCarbH : 0)/60;
+    const dr = drinkCarbTo(mi)-drinkCarbTo(mi-1);
     pool += intakeMin[mi-1] + dr;
     const ab=Math.min(pool*0.07+Math.min(pool,dr), absMax, pool); pool-=ab;
     G -= Math.max(use*0.3,use-ab); // mięśnie zawsze sięgają po część własnego glikogenu
@@ -1002,7 +1016,7 @@ function compute(){
   if(!alerts.some(a=>a[0]!=='ok') && H>=1) alerts.push(['ok','Plan pokrywa cel węglowodanów i płynów.']);
 
   return {P, route, sim, T, H, IF, elapsed, stops, kcalH, choBurnH, target, rec, gut, sweat, fluidH, naH, naConc,
-    drink, share, dPor, elec, ePor, bN, bV, carbsPerCarbBottle, drinkCarbH, drinkCarbTo, mixB, mixH, carbPerL,
+    drink, share, dPor, elec, ePor, bN, bV, carbsPerCarbBottle, drinkCarbH, drinkCarbTo, mixB, kindAt, bladL, bladFills, cont, carbPerL,
     events, used, refills, bottlesTot, carbBottles, fluidTot, G0, gMin, gc, lowT, totC, totNa, solidC, solidK, drinkC, totIn,
     sweatTot, lossKg, lossPct, cafTot, cafMax, alerts, kmAt, every, solidH};
 }
@@ -1111,7 +1125,7 @@ function bindProfileTip(r){
       hl.setAttribute('x1',best.x); hl.setAttribute('x2',best.x);
       hd.setAttribute('visibility','hidden'); hm.setAttribute('visibility','visible'); hm.setAttribute('cx',best.x); hm.setAttribute('cy',best.y);
       let html=`<b>${hm_(e.t)} jazdy · km ${fmt(e.km)}</b>`;
-      if(e.type==='refill') html+=`<span class="tt-k" style="--c:var(--water)">Uzupełnienie bidonów</span><span>${e.mix?`${e.mix}× ${r.bV} ml z napojem`:''}${e.mix&&e.water?', ':''}${e.water?`${e.water}× ${r.bV} ml wody`:''}</span>`;
+      if(e.type==='refill') html+=`<span class="tt-k" style="--c:var(--water)">Uzupełnienie wody</span><span>${[e.mix?`${e.mix}× ${r.bV} ml z napojem`:'',e.water?`${e.water}× ${r.bV} ml wody`:'',e.blad?`bukłak ${fmt(e.blad,2)} l`:''].filter(Boolean).join(', ')}</span>`;
       else { html+=`<span class="tt-k" style="--c:${MK[mkKind(e.items[0])].c}">Punkt jedzenia</span>`;
         e.items.forEach(p=>html+=`<span>${esc(p.n)} · ${p.c?p.c+' g węgli':p.na+' mg sodu'}${p.caf?` · ${p.caf} mg kofeiny`:''}</span>`); }
       show(bx,by,html); return;
@@ -1153,13 +1167,13 @@ function render(r){
 
   // tabela planu
   let cum=0; const rows=[];
-  rows.push(`<tr class="ev-start"><td class="num">0:00</td><td class="num">${clockAt(r,0)}</td><td class="num">0</td><td><div class="items"><strong>Start</strong><span class="muted">${(()=>{ const m=Math.min(r.bN,r.mixB), w=r.bN-m; return [m?`${m}× bidon ${r.bV} ml: ${esc(drinkName)}`:'', w?`${w}× bidon ${r.bV} ml: woda`:''].filter(Boolean).join(', '); })()}. Pij po ${fluidSlot} ml co ${r.every} min, czyli łyk co 10–15 min.</span></div></td><td class="num">—</td><td></td></tr>`);
+  rows.push(`<tr class="ev-start"><td class="num">0:00</td><td class="num">${clockAt(r,0)}</td><td class="num">0</td><td><div class="items"><strong>Start</strong><span class="muted">${(()=>{ const c0=r.cont.filter(c=>c.cyc===0), m=c0.filter(c=>c.kind==='mix').length, w=c0.filter(c=>c.kind==='water').length; return [m?`${m}× bidon ${r.bV} ml: ${esc(drinkName)}`:'', w?`${w}× bidon ${r.bV} ml: woda`:'', r.bladL?`bukłak ${fmt(r.bladL,2)} l: woda`:''].filter(Boolean).join(', ')||'brak bidonów i bukłaka'; })()}. Pij po ${fluidSlot} ml co ${r.every} min, czyli łyk co 10–15 min.</span></div></td><td class="num">—</td><td></td></tr>`);
   const perEvent=[];
   r.events.forEach(e=>{
     const tcum = r.drinkCarbTo(e.t);
     if(e.type==='refill'){
-      rows.push(`<tr class="ev-refill"><td class="num">${hm(e.t)}</td><td class="num">${clockAt(r,e.t)}</td><td class="num">${fmt(e.km)}</td><td><div class="items"><strong style="color:var(--water)">Uzupełnij bidony</strong><span class="muted">${e.mix?`${e.mix}× ${r.bV} ml: ${esc(drinkName)} (porcje na bidon: ${fmt(r.dPor,r.dPor%1?1:0)})`:''}${e.mix&&e.water?', ':''}${e.water?`${e.water}× ${r.bV} ml: sama woda`:''}${r.elec.na?`. Do każdego: ${esc(r.elec.n)} × ${fmt(r.ePor,r.ePor%1?1:0)}`:''}</span></div></td><td class="num">—</td><td></td></tr>`);
-      perEvent.push(`${hm(e.t)}  km ${String(Math.round(e.km)).padStart(3)}  ▸ BIDONY: ${[e.mix?e.mix+'× napój':'',e.water?e.water+'× woda':''].filter(Boolean).join(' + ')}`);
+      rows.push(`<tr class="ev-refill"><td class="num">${hm(e.t)}</td><td class="num">${clockAt(r,e.t)}</td><td class="num">${fmt(e.km)}</td><td><div class="items"><strong style="color:var(--water)">Uzupełnij ${e.mix||e.water?'bidony':''}${(e.mix||e.water)&&e.blad?' i ':''}${e.blad?'bukłak':''}</strong><span class="muted">${e.mix?`${e.mix}× ${r.bV} ml: ${esc(drinkName)} (porcje na bidon: ${fmt(r.dPor,r.dPor%1?1:0)})`:''}${e.mix&&e.water?', ':''}${e.water?`${e.water}× ${r.bV} ml: sama woda`:''}${(e.mix||e.water)&&e.blad?', ':''}${e.blad?`${e.mix||e.water?'bukłak ':''}${fmt(e.blad,2)} l wody`:''}${r.elec.na&&(e.mix||e.water)?`. Do każdego bidonu: ${esc(r.elec.n)} × ${fmt(r.ePor,r.ePor%1?1:0)}`:''}</span></div></td><td class="num">—</td><td></td></tr>`);
+      perEvent.push(`${hm(e.t)}  km ${String(Math.round(e.km)).padStart(3)}  ▸ WODA: ${[e.mix?e.mix+'× napój':'',e.water?e.water+'× woda':'',e.blad?'bukłak':''].filter(Boolean).join(' + ')}`);
       return;
     }
     const c=e.items.reduce((a,p)=>a+p.c,0); cum+=c;
@@ -1183,7 +1197,8 @@ function render(r){
   const waterB = r.bottlesTot - r.carbBottles, reff=r.refills.length?` · ${r.refills.length}× uzupełnienie po drodze`:'';
   if(r.carbBottles) drinkPack.push(`<li><span class="cnt">${r.carbBottles}×</span><span><span class="tag t-mix">bidon z napojem</span>${r.bV} ml: ${esc(r.drink.id==='diy'?'własna mieszanka':r.drink.n)}</span><span class="sm">${fmt(r.carbBottles*r.bV/1000,1)} l</span></li>`);
   if(waterB) drinkPack.push(`<li><span class="cnt">${waterB}×</span><span><span class="tag t-drink">bidon z wodą</span>${r.bV} ml: sama woda${r.elec.na&&r.ePor>0?' + elektrolity':''}</span><span class="sm">${fmt(waterB*r.bV/1000,1)} l</span></li>`);
-  drinkPack.push(`<li class="packnote"><span></span><span class="muted">Na rowerze ${r.bN} ${r.bN===1?'bidon':'bidony'}${reff}. Najpierw pij napój, potem wodę. Razem ${fmt(r.fluidTot,1)} l.</span><span></span></li>`);
+  if(r.bladFills) drinkPack.push(`<li><span class="cnt">${r.bladFills}×</span><span><span class="tag t-drink">bukłak</span>${fmt(r.bladL,2)} l: sama woda <span class="muted">(${r.bladFills===1?'jedno napełnienie':r.bladFills+' napełnienia'})</span></span><span class="sm">${fmt(r.bladFills*r.bladL,1)} l</span></li>`);
+  if(r.bN||r.bladL) drinkPack.push(`<li class="packnote"><span></span><span class="muted">Ze sobą: ${[r.bN?`${r.bN} ${r.bN===1?'bidon':r.bN<5?'bidony':'bidonów'}`:'',r.bladL?`bukłak ${fmt(r.bladL,2)} l`:''].filter(Boolean).join(' + ')}${reff}. ${r.bN&&r.bladL?'Najpierw pij z bidonów (napój przed wodą), potem z bukłaka. ':r.carbBottles&&r.bottlesTot>r.carbBottles?'Najpierw pij napój, potem wodę. ':''}Potrzeba razem ${fmt(r.fluidTot,1)} l.</span><span></span></li>`);
   pack.unshift(...drinkPack);
 
   const preC=Math.round(P.mass*2/5)*5, recC=Math.round(P.mass*1.1/5)*5, recP=Math.round(P.mass*0.3);
@@ -1254,12 +1269,11 @@ function render(r){
 const STICK = {gel:'żel',chew:'żelki',bar:'baton',food:'jedzenie',cap:'sól'};
 // co jest w bidonie, z którego pijesz w danej chwili: najpierw napój, potem sama woda
 function sipWhat(r,t){
-  if(!r.mixB) return '<span class="sip w">wody</span>';
-  const h=t/60, h0=(t-r.every)/60;
-  if(h<=r.mixH) return '<span class="sip m">napoju</span>';
-  if(h0<r.mixH) return '<span class="sip m">napoju</span> → <span class="sip w">wody</span>';
-  return '<span class="sip w">wody</span>';
+  const nm={mix:'<span class="sip m">napoju</span>',water:'<span class="sip w">wody</span>',blad:'<span class="sip w">wody z bukłaka</span>'};
+  const k=r.kindAt(t), k0=r.kindAt(Math.max(0,t-r.every));
+  return k0!==k ? `${nm[k0]} → ${nm[k]}` : nm[k];
 }
+
 function stickerItems(items){
   const c={}, order=[];
   items.forEach(p=>{ const k=STICK[p.t]+(p.caf?' z kofeiną':''); if(!c[k]){c[k]=0;order.push(k);} c[k]++; });
@@ -1311,7 +1325,7 @@ async function drawSticker(r,plain=false){ // plain: białe tło wierszy, kolor 
   const fluidSlot=Math.round(r.fluidH*r.every/60*1000/10)*10;
   const rows=[];
   r.events.forEach(e=>{
-    if(e.type==='refill') rows.push({e,kinds:['water'],label:'BIDONY', sub:[e.mix?`${e.mix}× napój`:'',e.water?`${e.water}× woda`:''].filter(Boolean).join(' + ')});
+    if(e.type==='refill') rows.push({e,kinds:['water'],label:e.mix||e.water?'BIDONY':'BUKŁAK', sub:[e.mix?`${e.mix}× napój`:'',e.water?`${e.water}× woda`:'',(e.mix||e.water)&&e.blad?'bukłak':''].filter(Boolean).join(' + ')||'woda'});
     else if(e.items.length){
       const cnt={}, order=[]; e.items.forEach(p=>{ const k=stKind(p); if(!cnt[k]){cnt[k]=0;order.push(k);} cnt[k]++; });
       rows.push({e,kinds:order,cnt,key:order.join('+'),label:order.map(k=>(cnt[k]>1?cnt[k]+'× ':'')+SC[k].n).join(' + '), sub:''});
